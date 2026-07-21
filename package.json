@@ -1,0 +1,24 @@
+{
+  "name": "salon_project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -n \"FE,BE\" -c \"blue,green\" \"npm --prefix frontend run dev\" \"npm --prefix backend run dev\"",
+    "install:all": "npm install && npm --prefix frontend install && npm --prefix backend install",
+    "prepare": "husky",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^10.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.5"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx,json,css,md}": "prettier --write"
+  }
+}
