@@ -1,0 +1,49 @@
+name: the_beauty_town
+
+services:
+  api:
+    image: ghcr.io/digitalwebweaver/the-beauty-town-api:latest
+    container_name: the_beauty_town_api
+    restart: unless-stopped
+    env_file:
+      - ./.env.api
+    # Postgres and any other host service are reachable at host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - the_beauty_town_uploads:/app/uploads
+    networks:
+      - the_beauty_town_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    image: ghcr.io/digitalwebweaver/the-beauty-town-web:latest
+    container_name: the_beauty_town_web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "6066:80"
+    networks:
+      - the_beauty_town_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  the_beauty_town_net:
+    name: the_beauty_town_net
+    driver: bridge
+
+volumes:
+  the_beauty_town_uploads:
+    name: the_beauty_town_uploads

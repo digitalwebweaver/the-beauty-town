@@ -1,0 +1,8 @@
+# Ensure Linux tools (bash, Docker, nginx) always see LF line endings for
+# files they parse, regardless of what OS a developer commits from.
+*.sh          text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+Dockerfile    text eol=lf
+*.conf        text eol=lf
+.dockerignore text eol=lf
