@@ -46,6 +46,15 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Public-site brand palette — used only by the marketing Home page and
+     the shared Navbar/Footer. Deliberately separate from --primary etc.
+     above, which the whole app (admin/staff/customer dashboards) shares. */
+  --color-brand-maroon: var(--brand-maroon);
+  --color-brand-maroon-dark: var(--brand-maroon-dark);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-cream: var(--brand-cream);
+  --font-display: 'Playfair Display', var(--font-sans);
 }
 
 :root {
@@ -55,7 +64,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.55 0.19 5);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -81,6 +90,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --brand-maroon: oklch(0.32 0.09 15);
+  --brand-maroon-dark: oklch(0.22 0.07 15);
+  --brand-gold: oklch(0.72 0.11 75);
+  --brand-cream: oklch(0.95 0.02 75);
 }
 
 .dark {
@@ -126,5 +140,15 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Printing a receipt: dialogs portal outside #root, so hiding the app
+   shell and the dialog chrome leaves just the receipt content behind. */
+@media print {
+  #root,
+  [data-slot='dialog-overlay'],
+  [data-slot='dialog-close'] {
+    display: none;
   }
 }
