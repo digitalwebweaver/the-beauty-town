@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ROUTES } from '@/constants/routes';
+import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/formatDate';
 import { useAuth } from '@/hooks/useAuth';
 import { useAllAppointments, useMyAppointments } from '@/services/appointments.api';
@@ -22,10 +23,17 @@ interface NotificationItem {
   href: string;
 }
 
+interface NotificationBellProps {
+  /** Extra classes for the trigger button — lets a dark header (the mobile
+   * app top bar) recolor the icon without this component needing to know
+   * about that context itself. */
+  className?: string;
+}
+
 // Real, role-appropriate alerts computed from data the app already fetches
 // elsewhere — no separate notifications backend to keep in sync, and
 // nothing shown here is ever fabricated placeholder content.
-function NotificationBell() {
+function NotificationBell({ className }: NotificationBellProps) {
   const { role } = useAuth();
   const isStaffLike = role === 'admin' || role === 'staff';
   const today = new Date().toISOString().slice(0, 10);
@@ -90,7 +98,12 @@ function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('relative', className)}
+          aria-label="Notifications"
+        >
           <Bell className="h-5 w-5" />
           {items.length > 0 && (
             <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">

@@ -1,4 +1,4 @@
-import { Menu, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,20 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import NotificationBell from '@/components/layout/NotificationBell';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import type { NavItem } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
-import { cn } from '@/lib/utils';
 
-interface DashboardHeaderProps {
-  mobileNav: NavItem[];
-  mobileLabel: string;
-}
-
-function DashboardHeader({ mobileNav, mobileLabel }: DashboardHeaderProps) {
+// Mobile/tablet primary navigation now lives in MobileTabBar (a bottom tab
+// bar, rendered by DashboardLayout) instead of a hamburger-opens-a-drawer
+// here — this header is just search + notifications + account from here on,
+// on every viewport. On phone/tablet specifically it also picks up the
+// brand-maroon surface used across the rest of the mobile app shell; desktop
+// keeps the existing neutral bar since the sidebar already carries branding
+// there.
+function DashboardHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -47,58 +46,27 @@ function DashboardHeader({ mobileNav, mobileLabel }: DashboardHeaderProps) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-8">
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-10 w-10 md:hidden">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-72 max-w-[85vw] p-0">
-          <SheetHeader className="border-b px-4 py-4 text-left">
-            <SheetTitle>{mobileLabel}</SheetTitle>
-          </SheetHeader>
-          <nav className="space-y-1 p-4">
-            {mobileNav.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  end
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    )
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </NavLink>
-              );
-            })}
-          </nav>
-        </SheetContent>
-      </Sheet>
-
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-brand-maroon-dark px-4 md:border-b md:bg-background/80 md:px-8 md:backdrop-blur">
       <div className="relative max-w-md flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search…" className="pl-9" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70 md:text-muted-foreground" />
+        <Input
+          placeholder="Search…"
+          className="border-white/20 bg-white/10 pl-9 text-white placeholder:text-white/60 md:border-input md:bg-background md:text-foreground md:placeholder:text-muted-foreground"
+        />
       </div>
 
       {/* ml-auto pushes this cluster flush to the right edge regardless of
-          the search box's width — it used to just trail directly after the
-          search box, landing well short of the right edge on wide screens. */}
+          the search box's width. */}
       <div className="ml-auto flex items-center gap-1">
-        <NotificationBell />
+        <NotificationBell className="text-white hover:bg-white/10 hover:text-white md:text-foreground md:hover:bg-accent md:hover:text-accent-foreground" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 pl-2 pr-3">
-              <Avatar className="h-8 w-8">
+            <Button
+              variant="ghost"
+              className="gap-2 pl-2 pr-3 text-white hover:bg-white/10 hover:text-white md:text-foreground md:hover:bg-accent md:hover:text-accent-foreground"
+            >
+              <Avatar className="h-8 w-8 ring-1 ring-white/30 md:ring-0">
                 <AvatarImage src={user?.avatarUrl} alt={user?.name} />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>

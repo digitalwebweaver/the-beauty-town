@@ -3,6 +3,10 @@ import { createApp } from './app';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
 import { pingDb, pool } from '@/config/db';
+import {
+  startAppointmentNotificationsJob,
+  stopAppointmentNotificationsJob,
+} from '@/jobs/appointmentNotifications.job';
 
 async function bootstrap() {
   const app = createApp();
@@ -28,8 +32,11 @@ async function bootstrap() {
     logger.info(`🌐 CORS origin: ${env.CLIENT_URL}`);
   });
 
+  startAppointmentNotificationsJob();
+
   const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}. Shutting down…`);
+    stopAppointmentNotificationsJob();
     server.close(async () => {
       await pool.end();
       logger.info('✔ Closed HTTP server and DB pool.');

@@ -3,6 +3,52 @@ import type { PoolClient } from 'pg';
 import { query, withTransaction } from '@/config/db';
 import { ApiError } from '@/utils/ApiError';
 import { isHoliday } from '@/api/holidays/holidays.repository';
+import { sendPushToRole, sendPushToUser } from '@/api/push/push.service';
+
+/** "14:30:00" -> "2:30 PM" — for push notification body text only. */
+function formatTimeForPush(hms: string): string {
+  const [hStr, mStr] = hms.split(':');
+  const h = Number(hStr);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mStr} ${period}`;
+}
+
+interface NotifiableAppointment {
+  staff_id: string | null;
+  staff_name: string | null;
+  customer_name: string;
+  start_time: string;
+  services: { name: string }[];
+}
+
+// Push to admin always, and to the specific assigned staff member too (not
+// just "the staff role" broadly) so the person actually working that slot
+// gets pinged directly. Best-effort: a push failure never blocks the
+// appointment action itself (see push.service.ts's own error handling).
+async function notifyNewAppointment(appt: NotifiableAppointment): Promise<void> {
+  const services = appt.services.map((s) => s.name).join(', ') || 'a booking';
+  const payload = {
+    title: `New booking — ${appt.customer_name}`,
+    body: `${services} at ${formatTimeForPush(appt.start_time)}${appt.staff_name ? ` with ${appt.staff_name}` : ''}.`,
+    url: '/admin/appointments',
+  };
+  await sendPushToRole('admin', payload);
+  if (appt.staff_id)
+    await sendPushToUser(appt.staff_id, { ...payload, url: '/staff/appointments' });
+}
+
+async function notifyCancelledAppointment(appt: NotifiableAppointment): Promise<void> {
+  const services = appt.services.map((s) => s.name).join(', ') || 'a booking';
+  const payload = {
+    title: 'Booking cancelled',
+    body: `${appt.customer_name} cancelled ${services} at ${formatTimeForPush(appt.start_time)}.`,
+    url: '/admin/appointments',
+  };
+  await sendPushToRole('admin', payload);
+  if (appt.staff_id)
+    await sendPushToUser(appt.staff_id, { ...payload, url: '/staff/appointments' });
+}
 
 /**
  * Add HH:MM + minutes → HH:MM:SS string (for DB).
@@ -117,7 +163,7 @@ export async function createAppointment(input: CreateInput) {
     throw ApiError.badRequest('The salon is closed on this date');
   }
 
-  return withTransaction(async (client) => {
+  const appt = await withTransaction(async (client) => {
     // 1. Lock service rows & compute total price + total duration
     const svcRes = await client.query<{
       id: string;
@@ -288,6 +334,11 @@ export async function createAppointment(input: CreateInput) {
       throw err;
     }
   });
+
+  // Fire-and-forget, only after the transaction has actually committed —
+  // a push failure must never look like the booking itself failed.
+  await notifyNewAppointment(appt).catch(() => {});
+  return appt;
 }
 
 export async function getAppointmentById(id: string, client?: any) {
@@ -453,7 +504,9 @@ export async function updateAppointmentStatus(id: string, status: string) {
     [id, status]
   );
   if (!rowCount) throw ApiError.notFound('Appointment not found');
-  return getAppointmentById(rows[0].id);
+  const appt = await getAppointmentById(rows[0].id);
+  if (status === 'cancelled') await notifyCancelledAppointment(appt).catch(() => {});
+  return appt;
 }
 
 export async function cancelAppointment(id: string, customerId: string, reason?: string) {
@@ -467,7 +520,9 @@ export async function cancelAppointment(id: string, customerId: string, reason?:
     [id, customerId, reason ?? null]
   );
   if (!rowCount) throw ApiError.badRequest('Cannot cancel — not found or already started');
-  return getAppointmentById(id);
+  const appt = await getAppointmentById(id);
+  await notifyCancelledAppointment(appt).catch(() => {});
+  return appt;
 }
 
 // Salon's booking window — must match the frontend's TIME_SLOTS list

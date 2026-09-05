@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import PageHeader from '@/components/common/PageHeader';
 import PasswordInput from '@/components/common/PasswordInput';
 import { useAuth } from '@/hooks/useAuth';
+import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { imageUrl } from '@/lib/imageUrl';
 import { digitsOnly, lettersOnly, nameInputProps, phoneInputProps } from '@/lib/inputHelpers';
 import { useUpdateProfile, useUploadAvatar } from '@/services/users.api';
@@ -156,6 +157,7 @@ function ChangePasswordCard() {
 function ProfilePage() {
   const { user } = useAuth();
   const isCustomer = user?.role === 'customer';
+  const push = usePushSubscription();
   const updateMut = useUpdateProfile();
   const uploadMut = useUploadAvatar();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -309,6 +311,37 @@ function ProfilePage() {
                   />
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {!isCustomer && (
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Push notifications</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">Push notifications on this device</p>
+                  <p className="text-sm text-muted-foreground">
+                    {push.supported
+                      ? 'Get an instant alert here for new bookings, cancellations, and unconfirmed bookings closing in — free, no WhatsApp or SMS required.'
+                      : "This browser doesn't support push notifications — try a recent Chrome, Edge, or Safari."}
+                  </p>
+                  {push.permission === 'denied' && (
+                    <p className="mt-1 text-xs text-destructive">
+                      Notifications are blocked for this site in your browser settings — allow them
+                      there first.
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={push.subscribed}
+                  onCheckedChange={(v) => (v ? push.enable() : push.disable())}
+                  disabled={!push.supported || push.loading || push.permission === 'denied'}
+                />
+              </div>
             </CardContent>
           </Card>
         )}

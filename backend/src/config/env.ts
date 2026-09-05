@@ -40,6 +40,13 @@ const schema = z.object({
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_UPLOAD_MB: z.coerce.number().default(5),
 
+  // Web Push — optional, same graceful-noop pattern as SMTP_*: unset in a
+  // given environment simply means push sends are silently skipped rather
+  // than the app failing to boot.
+  VAPID_PUBLIC_KEY: z.string().optional().default(''),
+  VAPID_PRIVATE_KEY: z.string().optional().default(''),
+  VAPID_SUBJECT: z.string().optional().default('mailto:admin@example.com'),
+
   // Whether to set the `Secure` flag on auth cookies. Defaults to true in
   // production (correct for HTTPS), but must be explicitly set to `false`
   // when deploying prod over plain HTTP — otherwise browsers silently drop

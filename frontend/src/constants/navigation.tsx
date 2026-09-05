@@ -31,12 +31,16 @@ export const CUSTOMER_NAV: NavItem[] = [
   { label: 'Profile', href: ROUTES.profile, icon: UserCircle },
 ];
 
+// Order matters beyond just the desktop sidebar — MobileTabBar (the
+// bottom tab bar staff/admin get on phone/tablet, replacing the old
+// hamburger-drawer pattern) takes the first 4 as its primary tabs and
+// folds everything after that into its "More" sheet.
 export const ADMIN_NAV: NavItem[] = [
   { label: 'Overview', href: ROUTES.admin, icon: LayoutDashboard },
-  { label: 'Book Appointment', href: ROUTES.adminBook, icon: Sparkles },
+  { label: 'Appointments', href: ROUTES.adminAppointments, icon: CalendarCheck },
   { label: 'Quick Bill', href: ROUTES.adminBilling, icon: Receipt },
   { label: 'Sales', href: ROUTES.adminSales, icon: History },
-  { label: 'Appointments', href: ROUTES.adminAppointments, icon: CalendarCheck },
+  { label: 'Book Appointment', href: ROUTES.adminBook, icon: Sparkles },
   { label: 'Services', href: ROUTES.adminServices, icon: ScissorsSquare },
   { label: 'Packages', href: ROUTES.adminPackages, icon: Gift },
   { label: 'Holidays', href: ROUTES.adminHolidays, icon: CalendarOff },
@@ -50,11 +54,11 @@ export const ADMIN_NAV: NavItem[] = [
 
 export const STAFF_NAV: NavItem[] = [
   { label: 'Overview', href: ROUTES.staff, icon: LayoutDashboard },
-  { label: 'Book Appointment', href: ROUTES.staffBook, icon: Sparkles },
-  { label: 'Quick Bill', href: ROUTES.staffBilling, icon: Receipt },
-  { label: 'Sales', href: ROUTES.staffSales, icon: History },
-  { label: 'My Schedule', href: ROUTES.staffSchedule, icon: CalendarDays },
   { label: 'Appointments', href: ROUTES.staffAppointments, icon: CalendarCheck },
+  { label: 'Quick Bill', href: ROUTES.staffBilling, icon: Receipt },
+  { label: 'My Schedule', href: ROUTES.staffSchedule, icon: CalendarDays },
+  { label: 'Book Appointment', href: ROUTES.staffBook, icon: Sparkles },
+  { label: 'Sales', href: ROUTES.staffSales, icon: History },
   { label: 'Profile', href: ROUTES.staffProfile, icon: UserCog },
 ];
 

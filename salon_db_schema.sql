@@ -706,3 +706,23 @@ CREATE TABLE salon_holidays (
 
 CREATE INDEX idx_salon_holidays_date ON salon_holidays(holiday_date);
 
+-- =====================================================================
+-- 24. PUSH_SUBSCRIPTIONS — one row per browser/device opted in to Web
+--   Push (a user can have several — phone, tablet, desktop browser each
+--   subscribe separately). `endpoint` is the push service URL the
+--   browser gave us; `p256dh`/`auth` are the subscription's encryption
+--   keys, both required by the Web Push protocol to encrypt a payload
+--   for that endpoint. See backend/src/api/push/push.service.ts.
+-- =====================================================================
+CREATE TABLE push_subscriptions (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint    TEXT NOT NULL UNIQUE,
+  p256dh      TEXT NOT NULL,
+  auth        TEXT NOT NULL,
+  user_agent  TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_push_subscriptions_user ON push_subscriptions(user_id);
+

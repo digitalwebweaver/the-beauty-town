@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import AuthBootstrap from '@/components/common/AuthBootstrap';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { queryClient } from '@/lib/queryClient';
+import { registerServiceWorker } from '@/lib/registerServiceWorker';
 import { ROUTES } from '@/constants/routes';
 import { ADMIN_NAV, CUSTOMER_NAV, STAFF_NAV } from '@/constants/navigation';
 
@@ -143,3 +144,5 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>
 );
+
+registerServiceWorker();
