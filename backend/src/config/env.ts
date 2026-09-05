@@ -39,6 +39,15 @@ const schema = z.object({
 
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_UPLOAD_MB: z.coerce.number().default(5),
+
+  // Whether to set the `Secure` flag on auth cookies. Defaults to true in
+  // production (correct for HTTPS), but must be explicitly set to `false`
+  // when deploying prod over plain HTTP — otherwise browsers silently drop
+  // the cookie and every request looks unauthenticated.
+  COOKIE_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true')),
 });
 
 const parsed = schema.safeParse(process.env);

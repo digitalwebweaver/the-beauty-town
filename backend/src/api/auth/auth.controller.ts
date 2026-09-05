@@ -22,10 +22,16 @@ const REFRESH_COOKIE = 'refresh_token';
 const ACCESS_COOKIE = 'access_token';
 
 function cookieBase(): CookieOptions {
+  // COOKIE_SECURE env var overrides the isProd default so a prod deploy
+  // over plain HTTP (before HTTPS is set up) can still authenticate —
+  // Secure cookies are dropped by the browser on non-HTTPS origins.
+  const secure = env.COOKIE_SECURE ?? isProd;
   return {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'strict' : 'lax',
+    secure,
+    // `strict` requires HTTPS to be useful anyway; when we've explicitly
+    // dropped Secure we're clearly not on HTTPS, so downgrade to `lax`.
+    sameSite: secure ? 'strict' : 'lax',
     path: '/',
   };
 }
