@@ -28,6 +28,9 @@ const updateSchema = z.object({
   instagramUrl: urlOrEmpty,
   facebookUrl: urlOrEmpty,
   otpLoginEnabled: z.boolean().optional(),
+  allowPriceOverride: z.boolean().optional(),
+  appointmentNotificationsEnabled: z.boolean().optional(),
+  rebookingNudgesEnabled: z.boolean().optional(),
 });
 
 // Public — the storefront (Navbar/Footer) and printed receipts read this

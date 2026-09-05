@@ -18,10 +18,11 @@ export interface AppointmentListItem {
   notes?: string | null;
 }
 
-export function useMyAppointments() {
+export function useMyAppointments(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['appointments', 'mine'],
     queryFn: async () => (await api.get('/appointments/mine')).data.data as AppointmentListItem[],
+    enabled: opts?.enabled ?? true,
   });
 }
 
@@ -30,13 +31,16 @@ export function useAllAppointments(filters?: {
   from?: string;
   to?: string;
   q?: string;
+  enabled?: boolean;
 }) {
+  const { enabled, ...params } = filters ?? {};
   return useQuery({
-    queryKey: ['appointments', 'all', filters ?? {}],
+    queryKey: ['appointments', 'all', params],
     queryFn: async () => {
-      const { data } = await api.get('/appointments', { params: filters });
+      const { data } = await api.get('/appointments', { params });
       return data.data as AppointmentListItem[];
     },
+    enabled: enabled ?? true,
   });
 }
 

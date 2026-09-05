@@ -29,6 +29,7 @@ interface FormState {
   instagramUrl: string;
   facebookUrl: string;
   otpLoginEnabled: boolean;
+  allowPriceOverride: boolean;
 }
 
 function toFormState(s: SettingsDto): FormState {
@@ -43,6 +44,7 @@ function toFormState(s: SettingsDto): FormState {
     instagramUrl: s.instagram_url ?? '',
     facebookUrl: s.facebook_url ?? '',
     otpLoginEnabled: s.otp_login_enabled,
+    allowPriceOverride: s.allow_price_override,
   };
 }
 
@@ -83,6 +85,7 @@ function SettingsPage() {
       instagramUrl: form.instagramUrl.trim() || null,
       facebookUrl: form.facebookUrl.trim() || null,
       otpLoginEnabled: form.otpLoginEnabled,
+      allowPriceOverride: form.allowPriceOverride,
     };
     try {
       await updateMut.mutateAsync(patch);
@@ -235,6 +238,29 @@ function SettingsPage() {
               <Switch
                 checked={form.otpLoginEnabled}
                 onCheckedChange={(v) => set('otpLoginEnabled', v)}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="text-sm font-semibold">Billing</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Prices can vary case by case in this business — turn this on to let staff adjust an
+              item's price right in Quick Bill.
+            </p>
+            <div className="mt-4 flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="font-medium">Allow price editing in Quick Bill</p>
+                <p className="text-sm text-muted-foreground">
+                  When off, Quick Bill always charges the catalog price and the price field is
+                  locked.
+                </p>
+              </div>
+              <Switch
+                checked={form.allowPriceOverride}
+                onCheckedChange={(v) => set('allowPriceOverride', v)}
               />
             </div>
           </div>

@@ -11,6 +11,7 @@ interface SaleItemInput {
   id: string;
   quantity: number;
   discountInr: number;
+  unitPriceInr?: number;
 }
 
 interface PaymentInput {
@@ -127,7 +128,15 @@ export async function createSale(input: CreateSaleInput, staffId: string) {
       }
     }
 
-    // 3. Price every line from the locked rows — never trust client prices.
+    // 3. Price every line from the locked rows — never trust client prices,
+    //    except a per-line override, and only when the salon has actually
+    //    turned that on (re-checked here, not just in the UI, so a direct
+    //    API call can't bill an arbitrary price while the setting is off).
+    const settingsRes = await client.query<{ allow_price_override: boolean }>(
+      `SELECT allow_price_override FROM salon_settings WHERE id = 1`
+    );
+    const allowPriceOverride = settingsRes.rows[0]?.allow_price_override ?? false;
+
     let subtotal = 0;
     let itemDiscountTotal = 0;
     const lines: {
@@ -151,7 +160,10 @@ export async function createSale(input: CreateSaleInput, staffId: string) {
             : packagesById.get(item.id);
       if (!src) throw ApiError.badRequest('Unknown item in cart');
 
-      const unitPrice = Number(src.price_inr);
+      const unitPrice =
+        allowPriceOverride && item.unitPriceInr !== undefined
+          ? item.unitPriceInr
+          : Number(src.price_inr);
       const gross = round2(unitPrice * item.quantity);
       if (item.discountInr > gross) {
         throw ApiError.badRequest(`Discount on "${src.name}" can't exceed its own line total`);

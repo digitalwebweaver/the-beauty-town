@@ -12,10 +12,11 @@ export interface ProductDto {
   is_active: boolean;
 }
 
-export function useProducts() {
+export function useProducts(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['products'],
     queryFn: async () => (await api.get('/products')).data.data as ProductDto[],
+    enabled: opts?.enabled ?? true,
   });
 }
 

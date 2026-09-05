@@ -14,6 +14,7 @@ export interface SettingsDto {
   instagram_url: string | null;
   facebook_url: string | null;
   otp_login_enabled: boolean;
+  allow_price_override: boolean;
   updated_at: string;
 }
 
@@ -34,6 +35,7 @@ export const SETTINGS_FALLBACK: SettingsDto = {
   instagram_url: SALON_INFO.socials.instagram,
   facebook_url: SALON_INFO.socials.facebook,
   otp_login_enabled: false,
+  allow_price_override: false,
   updated_at: '',
 };
 
@@ -56,6 +58,7 @@ export interface UpdateSettingsInput {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   otpLoginEnabled?: boolean;
+  allowPriceOverride?: boolean;
 }
 
 export function useUpdateSettings() {

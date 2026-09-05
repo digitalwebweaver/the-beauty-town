@@ -353,6 +353,15 @@ CREATE TABLE appointments (
   cancellation_reason   TEXT,
   cancelled_at          TIMESTAMPTZ,
   completed_at          TIMESTAMPTZ,
+  -- "Already sent?" markers for the reminder/follow-up/rebooking-nudge
+  -- cron job (src/jobs/appointmentNotifications.job.ts) — set once the
+  -- corresponding email goes out so it never sends twice.
+  reminder_1week_sent_at  TIMESTAMPTZ,
+  reminder_24h_sent_at    TIMESTAMPTZ,
+  reminder_2h_sent_at     TIMESTAMPTZ,
+  followup_sent_at        TIMESTAMPTZ,
+  rebooking_nudge_sent_at TIMESTAMPTZ,
+  unconfirmed_alert_sent_at TIMESTAMPTZ,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
@@ -651,6 +660,9 @@ CREATE TABLE salon_settings (
   instagram_url  TEXT,
   facebook_url   TEXT,
   otp_login_enabled  BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_price_override BOOLEAN NOT NULL DEFAULT FALSE,
+  appointment_notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  rebooking_nudges_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -62,6 +62,10 @@ export interface CreateSaleItemInput {
   id: string;
   quantity: number;
   discountInr: number;
+  // Only honored by the backend when Settings > Billing > "Allow price
+  // editing in Quick Bill" is on — safe to always send the cart's current
+  // unit price, edited or not.
+  unitPriceInr?: number;
 }
 
 export interface CreateSalePaymentInput {

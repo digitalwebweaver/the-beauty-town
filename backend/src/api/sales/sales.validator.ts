@@ -6,6 +6,11 @@ const saleItemSchema = z.object({
   id: uuidString(),
   quantity: z.coerce.number().int().min(1).max(50).default(1),
   discountInr: z.coerce.number().min(0).max(999999).default(0),
+  // Only honored server-side when salon_settings.allow_price_override is
+  // on — see sales.service.ts. Sent regardless of the setting so the
+  // client doesn't need to know the setting's value to build the request;
+  // it's simply ignored when the toggle is off.
+  unitPriceInr: z.coerce.number().min(0).max(999999).optional(),
 });
 
 const paymentSchema = z.object({

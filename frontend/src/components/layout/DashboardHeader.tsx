@@ -1,4 +1,4 @@
-import { Bell, Menu, Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import NotificationBell from '@/components/layout/NotificationBell';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { NavItem } from '@/constants/navigation';
@@ -83,40 +84,42 @@ function DashboardHeader({ mobileNav, mobileLabel }: DashboardHeaderProps) {
         </SheetContent>
       </Sheet>
 
-      <div className="relative flex-1 max-w-md">
+      <div className="relative max-w-md flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search…" className="pl-9" />
       </div>
 
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-5 w-5" />
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
-      </Button>
+      {/* ml-auto pushes this cluster flush to the right edge regardless of
+          the search box's width — it used to just trail directly after the
+          search box, landing well short of the right edge on wide screens. */}
+      <div className="ml-auto flex items-center gap-1">
+        <NotificationBell />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="gap-2 pl-2 pr-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.avatarUrl} alt={user?.name} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <span className="hidden text-left text-sm md:block">
-              <span className="block font-medium leading-tight">{user?.name}</span>
-              <span className="block text-xs text-muted-foreground capitalize">{user?.role}</span>
-            </span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => navigate(profileHref)}>Profile</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate(ROUTES.home)}>Visit site</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-            Log out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="gap-2 pl-2 pr-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <span className="hidden text-left text-sm md:block">
+                <span className="block font-medium leading-tight">{user?.name}</span>
+                <span className="block text-xs text-muted-foreground capitalize">{user?.role}</span>
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate(profileHref)}>Profile</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(ROUTES.home)}>Visit site</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }

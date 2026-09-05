@@ -244,6 +244,19 @@ function QuickBillingPage() {
     );
   }
 
+  function setUnitPrice(key: string, value: number) {
+    setCart((prev) =>
+      prev.map((l) => {
+        if (l.key !== key) return l;
+        const nextUnitPrice = Math.max(0, value);
+        // Re-clamp the discount so it can never end up bigger than the new,
+        // possibly-lower, line total — the backend rejects that outright.
+        const gross = round2(nextUnitPrice * l.quantity);
+        return { ...l, unitPrice: nextUnitPrice, discountInr: Math.min(l.discountInr, gross) };
+      })
+    );
+  }
+
   function setLineDiscount(key: string, value: number) {
     setCart((prev) =>
       prev.map((l) => {
@@ -393,6 +406,9 @@ function QuickBillingPage() {
           id: l.refId,
           quantity: l.quantity,
           discountInr: l.discountInr,
+          // Only honored by the backend when the "Allow price editing"
+          // setting is on — safe to always send, edited or not.
+          unitPriceInr: l.unitPrice,
         })),
         discountInr: billDiscountInr,
         couponCode: appliedCoupon?.code,
@@ -816,6 +832,29 @@ function QuickBillingPage() {
                         {formatInr(round2(l.unitPrice * l.quantity - l.discountInr))}
                       </span>
                     </div>
+                    {settings.allow_price_override ? (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Price</span>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                            ₹
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            aria-label={`Unit price for ${l.name}`}
+                            value={l.unitPrice}
+                            onChange={(e) => setUnitPrice(l.key, Number(e.target.value))}
+                            className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                        </div>
+                        <span>per unit</span>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {formatInr(l.unitPrice)} per unit
+                      </p>
+                    )}
                     <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>Discount</span>
                       <div className="relative">

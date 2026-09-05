@@ -12,6 +12,9 @@ export interface SalonSettingsRow {
   instagram_url: string | null;
   facebook_url: string | null;
   otp_login_enabled: boolean;
+  allow_price_override: boolean;
+  appointment_notifications_enabled: boolean;
+  rebooking_nudges_enabled: boolean;
   updated_at: string;
 }
 
@@ -36,6 +39,9 @@ export interface UpdateSettingsInput {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   otpLoginEnabled?: boolean;
+  allowPriceOverride?: boolean;
+  appointmentNotificationsEnabled?: boolean;
+  rebookingNudgesEnabled?: boolean;
 }
 
 const COLUMN_BY_KEY: Record<keyof UpdateSettingsInput, string> = {
@@ -49,6 +55,9 @@ const COLUMN_BY_KEY: Record<keyof UpdateSettingsInput, string> = {
   instagramUrl: 'instagram_url',
   facebookUrl: 'facebook_url',
   otpLoginEnabled: 'otp_login_enabled',
+  allowPriceOverride: 'allow_price_override',
+  appointmentNotificationsEnabled: 'appointment_notifications_enabled',
+  rebookingNudgesEnabled: 'rebooking_nudges_enabled',
 };
 
 export async function updateSettings(patch: UpdateSettingsInput): Promise<SalonSettingsRow> {
