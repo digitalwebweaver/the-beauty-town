@@ -24,6 +24,19 @@ export interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+/** A collapsible sidebar section bundling related links under one heading. */
+export interface NavGroup {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+}
+
+export type NavEntry = NavItem | NavGroup;
+
+export function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return 'items' in entry;
+}
+
 export const CUSTOMER_NAV: NavItem[] = [
   { label: 'Overview', href: ROUTES.customerDashboard, icon: LayoutDashboard },
   { label: 'Book Appointment', href: ROUTES.book, icon: Sparkles },
@@ -31,27 +44,52 @@ export const CUSTOMER_NAV: NavItem[] = [
   { label: 'Profile', href: ROUTES.profile, icon: UserCircle },
 ];
 
-// Order matters beyond just the desktop sidebar — MobileTabBar (the
-// bottom tab bar staff/admin get on phone/tablet, replacing the old
-// hamburger-drawer pattern) takes the first 4 as its primary tabs and
-// folds everything after that into its "More" sheet.
-export const ADMIN_NAV: NavItem[] = [
+// The desktop sidebar's grouped structure — the 4 items used daily
+// (Overview, Appointments, Quick Bill, Sales) stay top-level for one-click
+// access; everything else folds into a themed, collapsible group so the
+// sidebar reads as ~10 rows instead of 14.
+export const ADMIN_SECTIONS: NavEntry[] = [
   { label: 'Overview', href: ROUTES.admin, icon: LayoutDashboard },
   { label: 'Appointments', href: ROUTES.adminAppointments, icon: CalendarCheck },
   { label: 'Quick Bill', href: ROUTES.adminBilling, icon: Receipt },
   { label: 'Sales', href: ROUTES.adminSales, icon: History },
-  { label: 'Book Appointment', href: ROUTES.adminBook, icon: Sparkles },
-  { label: 'Services', href: ROUTES.adminServices, icon: ScissorsSquare },
-  { label: 'Packages', href: ROUTES.adminPackages, icon: Gift },
-  { label: 'Holidays', href: ROUTES.adminHolidays, icon: CalendarOff },
-  { label: 'Staff', href: ROUTES.adminStaff, icon: Users },
-  { label: 'Customers', href: ROUTES.adminCustomers, icon: UserCircle },
-  { label: 'Inventory', href: ROUTES.adminInventory, icon: Package },
+  {
+    label: 'Bookings',
+    icon: CalendarDays,
+    items: [
+      { label: 'Book Appointment', href: ROUTES.adminBook, icon: Sparkles },
+      { label: 'Holidays', href: ROUTES.adminHolidays, icon: CalendarOff },
+    ],
+  },
+  {
+    label: 'Catalog',
+    icon: Package,
+    items: [
+      { label: 'Services', href: ROUTES.adminServices, icon: ScissorsSquare },
+      { label: 'Packages', href: ROUTES.adminPackages, icon: Gift },
+      { label: 'Inventory', href: ROUTES.adminInventory, icon: Package },
+    ],
+  },
+  {
+    label: 'People',
+    icon: Users,
+    items: [
+      { label: 'Staff', href: ROUTES.adminStaff, icon: Users },
+      { label: 'Customers', href: ROUTES.adminCustomers, icon: UserCircle },
+    ],
+  },
   { label: 'Coupons', href: ROUTES.adminCoupons, icon: Tag },
   { label: 'Settings', href: ROUTES.adminSettings, icon: Settings },
   { label: 'Profile', href: ROUTES.adminProfile, icon: UserCog },
 ];
 
+// Flattened from ADMIN_SECTIONS (single source of truth) for consumers that
+// need a plain list — MobileTabBar's bottom tabs (first 4) + "More" sheet.
+export const ADMIN_NAV: NavItem[] = ADMIN_SECTIONS.flatMap((entry) =>
+  isNavGroup(entry) ? entry.items : [entry]
+);
+
+// Short enough as-is — no grouping needed.
 export const STAFF_NAV: NavItem[] = [
   { label: 'Overview', href: ROUTES.staff, icon: LayoutDashboard },
   { label: 'Appointments', href: ROUTES.staffAppointments, icon: CalendarCheck },

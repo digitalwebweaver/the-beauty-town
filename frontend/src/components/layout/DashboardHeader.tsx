@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import NotificationBell from '@/components/layout/NotificationBell';
+import LiveClock from '@/components/layout/LiveClock';
+import ConnectionStatus from '@/components/layout/ConnectionStatus';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
@@ -57,7 +59,13 @@ function DashboardHeader() {
 
       {/* ml-auto pushes this cluster flush to the right edge regardless of
           the search box's width. */}
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-3">
+        <ConnectionStatus className="text-white/85 md:text-muted-foreground" />
+
+        <LiveClock className="hidden text-right text-white/90 sm:block md:text-foreground" />
+
+        <div className="hidden h-8 w-px bg-white/20 sm:block md:bg-border" />
+
         <NotificationBell className="text-white hover:bg-white/10 hover:text-white md:text-foreground md:hover:bg-accent md:hover:text-accent-foreground" />
 
         <DropdownMenu>

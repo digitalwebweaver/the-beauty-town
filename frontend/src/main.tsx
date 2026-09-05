@@ -10,7 +10,7 @@ import PageLoader from '@/components/common/PageLoader';
 import { queryClient } from '@/lib/queryClient';
 import { registerServiceWorker } from '@/lib/registerServiceWorker';
 import { ROUTES } from '@/constants/routes';
-import { ADMIN_NAV, CUSTOMER_NAV, STAFF_NAV } from '@/constants/navigation';
+import { ADMIN_NAV, ADMIN_SECTIONS, CUSTOMER_NAV, STAFF_NAV } from '@/constants/navigation';
 
 import PublicLayout from '@/layouts/PublicLayout';
 import AuthLayout from '@/layouts/AuthLayout';
@@ -96,7 +96,11 @@ createRoot(document.getElementById('root')!).render(
                   </Route>
 
                   <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                    <Route element={<DashboardLayout nav={ADMIN_NAV} label="Admin" />}>
+                    <Route
+                      element={
+                        <DashboardLayout nav={ADMIN_NAV} sections={ADMIN_SECTIONS} label="Admin" />
+                      }
+                    >
                       <Route path={ROUTES.admin} element={<AdminDashboardPage />} />
                       <Route path={ROUTES.adminServices} element={<ServicesManagementPage />} />
                       <Route path={ROUTES.adminPackages} element={<PackagesManagementPage />} />
