@@ -61,7 +61,7 @@ export const STAFF_NAV: NavItem[] = [
 export const PUBLIC_NAV: NavItem[] = [
   { label: 'Home', href: ROUTES.home, icon: Home },
   { label: 'Services', href: ROUTES.services, icon: Sparkles },
-  { label: 'Packages', href: ROUTES.packages, icon: Gift },
+  { label: 'Our Packages', href: ROUTES.packages, icon: Gift },
   { label: 'About', href: ROUTES.about, icon: UserCircle },
   { label: 'Gallery', href: ROUTES.gallery, icon: Package },
   { label: 'Contact', href: ROUTES.contact, icon: Settings },

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,14 @@ import { ROUTES } from '@/constants/routes';
 import { imageUrl } from '@/lib/imageUrl';
 import { useAuth } from '@/hooks/useAuth';
 import { usePackages, type PackageDto } from '@/services/packages.api';
+
+// These three categories also have their own dedicated, richer page (hero
+// copy, real photos) — link out to it from the category heading here.
+const CATEGORY_PAGE_HREF: Record<string, string> = {
+  'Bridal Packages': ROUTES.bridalPackages,
+  'Groom Packages': ROUTES.groomPackages,
+  'Destination Package': ROUTES.destinationPackage,
+};
 
 function PackageCard({ pkg, bookHref }: { pkg: PackageDto; bookHref: string }) {
   const price = Number(pkg.price_inr);
@@ -131,7 +139,17 @@ function PackagesPage() {
         <div className="space-y-12">
           {grouped.map(([category, items]) => (
             <section key={category}>
-              <h2 className="mb-5 text-xl font-semibold">{category}</h2>
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <h2 className="text-xl font-semibold">{category}</h2>
+                {CATEGORY_PAGE_HREF[category] && (
+                  <Link
+                    to={CATEGORY_PAGE_HREF[category]}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                  >
+                    View full page <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((p) => (
                   <PackageCard key={p.id} pkg={p} bookHref={bookHref} />

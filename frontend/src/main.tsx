@@ -19,6 +19,9 @@ import ProtectedRoute from '@/routes/ProtectedRoute';
 import HomePage from '@/pages/public/HomePage';
 import ServicesPage from '@/pages/public/ServicesPage';
 import PackagesPage from '@/pages/public/PackagesPage';
+import BridalPackagesPage from '@/pages/public/BridalPackagesPage';
+import GroomPackagesPage from '@/pages/public/GroomPackagesPage';
+import DestinationPackagePage from '@/pages/public/DestinationPackagePage';
 import AboutPage from '@/pages/public/AboutPage';
 import GalleryPage from '@/pages/public/GalleryPage';
 import ContactPage from '@/pages/public/ContactPage';
@@ -68,6 +71,9 @@ createRoot(document.getElementById('root')!).render(
                   <Route path={ROUTES.guestBook} element={<BookAppointmentPage />} />
                   <Route path={ROUTES.services} element={<ServicesPage />} />
                   <Route path={ROUTES.packages} element={<PackagesPage />} />
+                  <Route path={ROUTES.bridalPackages} element={<BridalPackagesPage />} />
+                  <Route path={ROUTES.groomPackages} element={<GroomPackagesPage />} />
+                  <Route path={ROUTES.destinationPackage} element={<DestinationPackagePage />} />
                   <Route path={ROUTES.about} element={<AboutPage />} />
                   <Route path={ROUTES.gallery} element={<GalleryPage />} />
                   <Route path={ROUTES.contact} element={<ContactPage />} />
