@@ -333,7 +333,17 @@ function BookAppointmentPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl pb-24 lg:pb-0">
+    <div
+      className={cn(
+        'pb-24 lg:pb-0',
+        // The admin/staff booking flow lives inside DashboardLayout, which
+        // already has a sidebar bounding the width — capping it again here
+        // (like the public guest page needs, since it has no such bound)
+        // just wasted a huge strip of screen on wide monitors. Matches
+        // QuickBillingPage's own unconstrained width for the same reason.
+        !isStaffBooking && 'mx-auto max-w-6xl'
+      )}
+    >
       {isStaffBooking ? (
         <PageHeader
           title="Book an appointment for a customer"
@@ -395,7 +405,7 @@ function BookAppointmentPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px] lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
         <Card>
           <CardContent className="p-6 md:p-8">
             {step === 1 && (
@@ -434,7 +444,7 @@ function BookAppointmentPage() {
                     </Button>
                   ))}
                 </div>
-                <div className="mt-6 grid gap-3 md:grid-cols-2">
+                <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {services.isLoading &&
                     Array.from({ length: 4 }).map((_, i) => (
                       <Skeleton key={i} className="h-24 rounded-lg" />
@@ -522,7 +532,7 @@ function BookAppointmentPage() {
                   </div>
                 </button>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {staff.data?.map((st) => {
                     const active = staffId === st.user_id;
                     return (
