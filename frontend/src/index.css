@@ -58,12 +58,15 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  /* Site-wide theme colors — cream instead of pure white, deep maroon
+     instead of near-black, everywhere those two were the app's base
+     surface/text tokens (page background, cards, popovers, sidebar text). */
+  --background: #f3e0d1;
+  --foreground: #741c28;
+  --card: #f3e0d1;
+  --card-foreground: #741c28;
+  --popover: #f3e0d1;
+  --popover-foreground: #741c28;
   --primary: oklch(0.55 0.19 5);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
@@ -82,8 +85,8 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar: #f3e0d1;
+  --sidebar-foreground: #741c28;
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
