@@ -99,8 +99,22 @@ function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs">
-          © {new Date().getFullYear()} {settings.name}. All rights reserved.
+        <div className="mt-10 flex flex-col items-center gap-2 border-t border-white/10 pt-6 text-center text-xs sm:flex-row sm:justify-between">
+          <p>
+            © {new Date().getFullYear()} {settings.name}. All rights reserved.
+          </p>
+          <p>
+            Developed by{' '}
+            <a
+              href="https://digitalwebweaver.com"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand-gold hover:underline"
+            >
+              Digital Web Weaver
+            </a>{' '}
+            — Software Development Company
+          </p>
         </div>
       </div>
     </footer>
