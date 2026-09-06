@@ -207,7 +207,7 @@ function CouponFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit coupon' : 'New coupon'}</DialogTitle>
           <DialogDescription>
@@ -215,7 +215,7 @@ function CouponFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+        <div className="max-h-[75vh] space-y-5 overflow-y-auto pr-1">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="c-code">Code</Label>
@@ -248,37 +248,39 @@ function CouponFormDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Discount</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex overflow-hidden rounded-md border">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={form.discountType === 'flat' ? 'default' : 'ghost'}
-                  className="rounded-none"
-                  onClick={() => set('discountType', 'flat')}
-                >
-                  ₹ Flat
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={form.discountType === 'percent' ? 'default' : 'ghost'}
-                  className="rounded-none"
-                  onClick={() => set('discountType', 'percent')}
-                >
-                  % Percent
-                </Button>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Discount</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex overflow-hidden rounded-md border">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={form.discountType === 'flat' ? 'default' : 'ghost'}
+                    className="rounded-none"
+                    onClick={() => set('discountType', 'flat')}
+                  >
+                    ₹ Flat
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={form.discountType === 'percent' ? 'default' : 'ghost'}
+                    className="rounded-none"
+                    onClick={() => set('discountType', 'percent')}
+                  >
+                    % Percent
+                  </Button>
+                </div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.discountValue}
+                  onChange={(e) => set('discountValue', e.target.value)}
+                  placeholder={form.discountType === 'flat' ? '200' : '20'}
+                  className="w-24"
+                />
               </div>
-              <Input
-                type="number"
-                min={0}
-                value={form.discountValue}
-                onChange={(e) => set('discountValue', e.target.value)}
-                placeholder={form.discountType === 'flat' ? '200' : '20'}
-                className="w-24"
-              />
               {form.discountType === 'percent' && (
                 <Input
                   type="number"
@@ -286,22 +288,20 @@ function CouponFormDialog({
                   value={form.maxDiscountInr}
                   onChange={(e) => set('maxDiscountInr', e.target.value)}
                   placeholder="Max ₹ cap (optional)"
-                  className="min-w-[160px] flex-1"
                 />
               )}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="c-min">Minimum spend</Label>
-            <Input
-              id="c-min"
-              type="number"
-              min={0}
-              value={form.minSpendInr}
-              onChange={(e) => set('minSpendInr', e.target.value)}
-              className="max-w-[200px]"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="c-min">Minimum spend</Label>
+              <Input
+                id="c-min"
+                type="number"
+                min={0}
+                value={form.minSpendInr}
+                onChange={(e) => set('minSpendInr', e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -339,7 +339,7 @@ function CouponFormDialog({
                   onChange={(e) => setItemSearch(e.target.value)}
                 />
               </div>
-              <div className="max-h-56 space-y-1 overflow-y-auto">
+              <div className="max-h-72 space-y-1 overflow-y-auto">
                 {shownServices.map((s) => {
                   const active = form.items.some((i) => i.type === 'service' && i.id === s.id);
                   return (
