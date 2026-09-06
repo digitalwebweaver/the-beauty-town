@@ -82,6 +82,8 @@ function SalesHistoryPage() {
     staffId: isAdmin && staffId !== ALL ? staffId : undefined,
     from: from || undefined,
     to: to || undefined,
+    page,
+    pageSize: PAGE_SIZE,
   });
 
   const filterKey = `${debouncedQ}|${status}|${staffId}|${from}|${to}`;
@@ -91,8 +93,7 @@ function SalesHistoryPage() {
     if (page !== 1) setPage(1);
   }
 
-  const all = sales.data ?? [];
-  const paged = all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const paged = sales.data?.data ?? [];
 
   const confirmVoid = async () => {
     if (!toVoid) return;
@@ -270,7 +271,7 @@ function SalesHistoryPage() {
                 className="mt-4"
                 page={page}
                 pageSize={PAGE_SIZE}
-                total={all.length}
+                total={sales.data?.total ?? 0}
                 onPageChange={setPage}
               />
             </>

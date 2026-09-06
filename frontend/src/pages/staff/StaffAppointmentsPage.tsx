@@ -16,16 +16,24 @@ import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/common/PageHeader';
 import AppointmentCalendar from '@/components/common/AppointmentCalendar';
 import TransferDialog, { type TransferTarget } from '@/components/common/TransferDialog';
+import SectionError from '@/components/common/SectionError';
+import Pagination from '@/components/common/Pagination';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { apiError } from '@/lib/apiError';
 import { STATUS_STYLES } from '@/lib/appointmentStatus';
 import { formatDate, formatTime } from '@/lib/formatDate';
 import { cn } from '@/lib/utils';
 import {
   useAllAppointments,
+  useAllAppointmentsPaged,
   useUpdateAppointmentStatus,
   type AppointmentListItem,
   type AppointmentStatus,
 } from '@/services/appointments.api';
+
+const PAGE_SIZE = 20;
+const UPCOMING_STATUSES: AppointmentStatus[] = ['pending', 'confirmed', 'in_progress'];
+const PAST_STATUSES: AppointmentStatus[] = ['completed', 'cancelled', 'no_show'];
 
 function AppointmentRow({
   a,
@@ -93,14 +101,52 @@ function AppointmentRow({
 
 function StaffAppointmentsPage() {
   const [q, setQ] = useState('');
-  const { data, isLoading } = useAllAppointments({ q: q || undefined });
+  const debouncedQ = useDebouncedValue(q);
   const updateMut = useUpdateAppointmentStatus();
   const [toTransfer, setToTransfer] = useState<TransferTarget | null>(null);
   const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
 
-  const list = data ?? [];
-  const upcoming = list.filter((a) => ['pending', 'confirmed', 'in_progress'].includes(a.status));
-  const past = list.filter((a) => ['completed', 'cancelled', 'no_show'].includes(a.status));
+  // Reset both tabs to page 1 whenever the search term actually changes.
+  const [appliedQ, setAppliedQ] = useState(debouncedQ);
+  if (debouncedQ !== appliedQ) {
+    setAppliedQ(debouncedQ);
+    setUpcomingPage(1);
+    setPastPage(1);
+  }
+
+  // Calendar view wants EVERY appointment matching the search (it lays
+  // them out by date, not by page or status tab).
+  const calendarQuery = useAllAppointments({
+    q: debouncedQ || undefined,
+    enabled: view === 'calendar',
+  });
+
+  // List view: two independent, genuinely paginated queries — one per tab
+  // — status-filtered server-side rather than fetching everything and
+  // splitting it client-side. Both stay enabled (not just the active tab)
+  // so the tab labels' counts are always accurate without an extra
+  // counts-only endpoint.
+  const upcomingQuery = useAllAppointmentsPaged({
+    status: UPCOMING_STATUSES,
+    q: debouncedQ || undefined,
+    page: upcomingPage,
+    pageSize: PAGE_SIZE,
+    enabled: view === 'list',
+  });
+  const pastQuery = useAllAppointmentsPaged({
+    status: PAST_STATUSES,
+    q: debouncedQ || undefined,
+    page: pastPage,
+    pageSize: PAGE_SIZE,
+    enabled: view === 'list',
+  });
+
+  const activeQuery = tab === 'upcoming' ? upcomingQuery : pastQuery;
+  const activePage = tab === 'upcoming' ? upcomingPage : pastPage;
+  const setActivePage = tab === 'upcoming' ? setUpcomingPage : setPastPage;
 
   const update = async (id: string, s: AppointmentStatus) => {
     try {
@@ -150,46 +196,75 @@ function StaffAppointmentsPage() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-      ) : view === 'calendar' ? (
-        <AppointmentCalendar
-          appointments={list}
-          renderAppointment={(a) => (
-            <AppointmentRow key={a.id} a={a} onUpdateStatus={update} onTransfer={setToTransfer} />
-          )}
-        />
+      {view === 'calendar' ? (
+        calendarQuery.isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+        ) : calendarQuery.isError ? (
+          <SectionError
+            message="Couldn't load appointments right now."
+            onRetry={() => calendarQuery.refetch()}
+          />
+        ) : (
+          <AppointmentCalendar
+            appointments={calendarQuery.data ?? []}
+            renderAppointment={(a) => (
+              <AppointmentRow key={a.id} a={a} onUpdateStatus={update} onTransfer={setToTransfer} />
+            )}
+          />
+        )
       ) : (
-        <Tabs defaultValue="upcoming">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'upcoming' | 'past')}>
           <TabsList>
-            <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
-            <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
+            <TabsTrigger value="upcoming">Upcoming ({upcomingQuery.data?.total ?? 0})</TabsTrigger>
+            <TabsTrigger value="past">Past ({pastQuery.data?.total ?? 0})</TabsTrigger>
           </TabsList>
 
-          {[
-            { value: 'upcoming', rows: upcoming },
-            { value: 'past', rows: past },
-          ].map((tab) => (
-            <TabsContent key={tab.value} value={tab.value} className="space-y-3">
-              {tab.rows.length === 0 ? (
+          {(
+            [
+              { value: 'upcoming', query: upcomingQuery },
+              { value: 'past', query: pastQuery },
+            ] as const
+          ).map(({ value, query }) => (
+            <TabsContent key={value} value={value} className="space-y-3">
+              {query.isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 rounded-lg" />
+                ))
+              ) : query.isError ? (
+                <SectionError
+                  message="Couldn't load appointments right now."
+                  onRetry={() => query.refetch()}
+                />
+              ) : (query.data?.data.length ?? 0) === 0 ? (
                 <Card>
                   <CardContent className="p-10 text-center text-sm text-muted-foreground">
                     Nothing here yet.
                   </CardContent>
                 </Card>
               ) : (
-                tab.rows.map((a) => (
-                  <AppointmentRow
-                    key={a.id}
-                    a={a}
-                    onUpdateStatus={update}
-                    onTransfer={setToTransfer}
-                  />
-                ))
+                <>
+                  {query.data?.data.map((a) => (
+                    <AppointmentRow
+                      key={a.id}
+                      a={a}
+                      onUpdateStatus={update}
+                      onTransfer={setToTransfer}
+                    />
+                  ))}
+                  {value === tab && (
+                    <Pagination
+                      className="pt-1"
+                      page={activePage}
+                      pageSize={PAGE_SIZE}
+                      total={activeQuery.data?.total ?? 0}
+                      onPageChange={setActivePage}
+                    />
+                  )}
+                </>
               )}
             </TabsContent>
           ))}

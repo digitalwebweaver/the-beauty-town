@@ -2,6 +2,7 @@ import {
   CalendarCheck,
   CalendarDays,
   CalendarOff,
+  FileBarChart,
   Gift,
   History,
   Home,
@@ -79,6 +80,7 @@ export const ADMIN_SECTIONS: NavEntry[] = [
     ],
   },
   { label: 'Coupons', href: ROUTES.adminCoupons, icon: Tag },
+  { label: 'Reports', href: ROUTES.adminReports, icon: FileBarChart },
   { label: 'Settings', href: ROUTES.adminSettings, icon: Settings },
   { label: 'Profile', href: ROUTES.adminProfile, icon: UserCog },
 ];

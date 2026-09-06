@@ -53,3 +53,43 @@ export const availabilityQuery = z.object({
   duration: z.coerce.number().int().min(5).max(600),
   serviceIds: serviceIdsField,
 });
+
+// Both left un-defaulted on purpose. `/appointments` is shared by several
+// widget-style callers that intentionally want EVERY row matching a
+// naturally-bounded filter with no pagination UI of their own (today's
+// board, this week's schedule, a staff dashboard's counts) as well as the
+// two admin/staff tables that genuinely need real paging over a
+// potentially large, loosely-filtered result set. Passing neither param
+// returns every matching row (no LIMIT at all, same as before this pass
+// except no longer silently capped at 500); passing either one switches
+// into paginated mode. Same dual-mode shape as users.routes.ts's
+// /customers.
+const pageQuery = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+// Own-appointments listings (customer's "mine", staff's "staff/mine") take
+// no filters beyond pagination — kept as their own schema (rather than
+// reusing listAllAppointmentsQuery) so a stray ?status=... on those routes
+// doesn't silently get accepted and ignored.
+export const myAppointmentsQuery = pageQuery;
+
+// One status, several (repeated `status=` keys, e.g. an "upcoming" tab
+// filtering to pending+confirmed+in_progress at once), or omitted — same
+// bare-value-or-array normalization as serviceIdsField above.
+const statusField = z.preprocess(
+  (v) => (v === undefined || v === '' ? undefined : Array.isArray(v) ? v : [v]),
+  z
+    .array(z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']))
+    .min(1)
+    .optional()
+);
+
+export const listAllAppointmentsQuery = pageQuery.extend({
+  status: statusField,
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+  q: z.string().max(120).optional(),
+  staffId: uuidString().optional(),
+});

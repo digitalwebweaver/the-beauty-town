@@ -26,6 +26,36 @@ interface SubscriptionRow {
   auth: string;
 }
 
+// Cap how many outbound push requests are ever in flight at once. A role
+// with a large number of subscribed devices firing an unbounded
+// `Promise.all` would otherwise send a burst of simultaneous HTTPS
+// requests to the push services (FCM/APNs/Mozilla autopush) on every
+// booking/cancellation/cron tick — this keeps that bounded regardless of
+// subscriber count.
+const PUSH_CONCURRENCY = 10;
+
+async function sendOne(row: SubscriptionRow, body: string): Promise<void> {
+  try {
+    await webpush.sendNotification(
+      { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
+      body
+    );
+  } catch (err) {
+    const statusCode = (err as { statusCode?: number }).statusCode;
+    // 404/410 is the push service's own way of saying "this
+    // subscription is dead, stop trying it" — clean it up so it
+    // isn't retried (and doesn't skew subscriber counts) forever.
+    if (statusCode === 404 || statusCode === 410) {
+      await query('DELETE FROM push_subscriptions WHERE id = $1', [row.id]).catch(() => {});
+    } else {
+      logger.error('Push send failed', {
+        subscriptionId: row.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}
+
 async function sendToSubscriptions(rows: SubscriptionRow[], payload: PushPayload): Promise<void> {
   if (!rows.length) return;
   if (!ensureConfigured()) {
@@ -41,29 +71,10 @@ async function sendToSubscriptions(rows: SubscriptionRow[], payload: PushPayload
   }
 
   const body = JSON.stringify(payload);
-  await Promise.all(
-    rows.map(async (row) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
-          body
-        );
-      } catch (err) {
-        const statusCode = (err as { statusCode?: number }).statusCode;
-        // 404/410 is the push service's own way of saying "this
-        // subscription is dead, stop trying it" — clean it up so it
-        // isn't retried (and doesn't skew subscriber counts) forever.
-        if (statusCode === 404 || statusCode === 410) {
-          await query('DELETE FROM push_subscriptions WHERE id = $1', [row.id]).catch(() => {});
-        } else {
-          logger.error('Push send failed', {
-            subscriptionId: row.id,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      }
-    })
-  );
+  for (let i = 0; i < rows.length; i += PUSH_CONCURRENCY) {
+    const batch = rows.slice(i, i + PUSH_CONCURRENCY);
+    await Promise.all(batch.map((row) => sendOne(row, body)));
+  }
 }
 
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {

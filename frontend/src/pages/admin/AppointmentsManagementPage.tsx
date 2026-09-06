@@ -23,16 +23,22 @@ import {
 import PageHeader from '@/components/common/PageHeader';
 import AppointmentCalendar from '@/components/common/AppointmentCalendar';
 import TransferDialog, { type TransferTarget } from '@/components/common/TransferDialog';
+import SectionError from '@/components/common/SectionError';
+import Pagination from '@/components/common/Pagination';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { apiError } from '@/lib/apiError';
 import { STATUS_STYLES } from '@/lib/appointmentStatus';
 import { formatDate, formatTime } from '@/lib/formatDate';
 import { cn } from '@/lib/utils';
 import {
   useAllAppointments,
+  useAllAppointmentsPaged,
   useUpdateAppointmentStatus,
   type AppointmentListItem,
   type AppointmentStatus,
 } from '@/services/appointments.api';
+
+const PAGE_SIZE = 20;
 
 const STATUSES: (AppointmentStatus | 'all')[] = [
   'all',
@@ -110,14 +116,51 @@ function AppointmentRow({
 
 function AppointmentsManagementPage() {
   const [q, setQ] = useState('');
+  const debouncedQ = useDebouncedValue(q);
   const [status, setStatus] = useState<'all' | AppointmentStatus>('all');
   const [toTransfer, setToTransfer] = useState<TransferTarget | null>(null);
   const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useAllAppointments({
+  // Reset to page 1 whenever the filters actually change, same pattern as
+  // ServicesManagementPage/CustomersPage.
+  const filterKey = `${debouncedQ}|${status}`;
+  const [appliedFilterKey, setAppliedFilterKey] = useState(filterKey);
+  if (filterKey !== appliedFilterKey) {
+    setAppliedFilterKey(filterKey);
+    setPage(1);
+  }
+
+  // Calendar view wants EVERY appointment matching the filters (it lays
+  // them out by date, not by page) — the list view is the one that's
+  // genuinely paginated. Only the active view's query is enabled, so
+  // switching tabs doesn't fetch both up front.
+  const calendarQuery = useAllAppointments({
     status: status === 'all' ? undefined : status,
-    q: q || undefined,
+    q: debouncedQ || undefined,
+    enabled: view === 'calendar',
   });
+  const listQuery = useAllAppointmentsPaged({
+    status: status === 'all' ? undefined : status,
+    q: debouncedQ || undefined,
+    page,
+    pageSize: PAGE_SIZE,
+    enabled: view === 'list',
+  });
+  const { data, isLoading, isError, refetch } =
+    view === 'calendar'
+      ? {
+          data: calendarQuery.data,
+          isLoading: calendarQuery.isLoading,
+          isError: calendarQuery.isError,
+          refetch: calendarQuery.refetch,
+        }
+      : {
+          data: listQuery.data?.data,
+          isLoading: listQuery.isLoading,
+          isError: listQuery.isError,
+          refetch: listQuery.refetch,
+        };
   const updateMut = useUpdateAppointmentStatus();
 
   const changeStatus = async (id: string, s: AppointmentStatus) => {
@@ -162,6 +205,8 @@ function AppointmentsManagementPage() {
             <Skeleton key={i} className="h-12 rounded-lg" />
           ))}
         </div>
+      ) : isError ? (
+        <SectionError message="Couldn't load appointments right now." onRetry={() => refetch()} />
       ) : view === 'calendar' ? (
         <AppointmentCalendar
           appointments={data ?? []}
@@ -294,6 +339,13 @@ function AppointmentsManagementPage() {
                 ))}
               </TableBody>
             </Table>
+            <Pagination
+              className="mt-4"
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={listQuery.data?.total ?? 0}
+              onPageChange={setPage}
+            />
           </CardContent>
         </Card>
       )}

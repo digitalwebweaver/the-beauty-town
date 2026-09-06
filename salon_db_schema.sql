@@ -131,6 +131,13 @@ CREATE TABLE users (
 CREATE INDEX idx_users_role         ON users(role);
 CREATE INDEX idx_users_created_at   ON users(created_at DESC);
 CREATE INDEX idx_users_phone        ON users(phone) WHERE phone IS NOT NULL;
+-- Matches the exact `right(regexp_replace(phone, '\D', '', 'g'), 10)`
+-- expression used everywhere phone numbers are compared by last-10-digits
+-- only (guest booking dedup, admin customer list, coupon limits) — the
+-- plain btree above can't serve those lookups.
+CREATE INDEX idx_users_phone_normalized
+  ON users (right(regexp_replace(phone, '\D', '', 'g'), 10))
+  WHERE phone IS NOT NULL;
 
 CREATE TRIGGER trg_users_updated
   BEFORE UPDATE ON users
@@ -550,6 +557,12 @@ CREATE INDEX idx_sales_customer_date  ON sales(customer_id, created_at DESC);
 CREATE INDEX idx_sales_staff_date     ON sales(staff_id, created_at DESC);
 CREATE INDEX idx_sales_status_created ON sales(status, created_at DESC);
 CREATE INDEX idx_sales_appointment    ON sales(appointment_id) WHERE appointment_id IS NOT NULL;
+-- Serves the same last-10-digits phone comparison used for older,
+-- customer_id-less tickets (admin customer list's LATERAL join, a
+-- customer's own sales history).
+CREATE INDEX idx_sales_customer_phone_normalized
+  ON sales (right(regexp_replace(customer_phone, '\D', '', 'g'), 10))
+  WHERE customer_phone IS NOT NULL;
 
 CREATE TRIGGER trg_sales_updated
   BEFORE UPDATE ON sales
@@ -623,6 +636,11 @@ CREATE TABLE coupon_redemptions (
 
 CREATE INDEX idx_coupon_redemptions_coupon ON coupon_redemptions(coupon_id);
 CREATE INDEX idx_coupon_redemptions_phone  ON coupon_redemptions(coupon_id, customer_phone);
+-- Serves the last-10-digits phone comparison the per-customer redemption
+-- limit check uses (coupons.service.ts).
+CREATE INDEX idx_coupon_redemptions_customer_phone_normalized
+  ON coupon_redemptions (right(regexp_replace(customer_phone, '\D', '', 'g'), 10))
+  WHERE customer_phone IS NOT NULL;
 
 -- =====================================================================
 -- 20. AUDIT_LOGS — track sensitive actions

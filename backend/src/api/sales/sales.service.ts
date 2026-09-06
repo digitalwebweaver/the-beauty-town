@@ -361,6 +361,8 @@ export async function listSales(filters: {
   from?: string;
   to?: string;
   q?: string;
+  page: number;
+  pageSize: number;
 }) {
   const where: string[] = [];
   const params: unknown[] = [];
@@ -388,6 +390,17 @@ export async function listSales(filters: {
   }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
+  const countRes = await query<{ count: string }>(
+    `SELECT COUNT(*) FROM sales s
+     LEFT JOIN users cu ON cu.id = s.customer_id
+     LEFT JOIN users st ON st.id = s.staff_id
+     ${clause}`,
+    params
+  );
+  const total = Number(countRes.rows[0].count);
+
+  const limitParam = params.length + 1;
+  const offsetParam = params.length + 2;
   const { rows } = await query(
     `SELECT s.id, s.appointment_id,
             COALESCE(cu.name, s.customer_name) AS customer_name,
@@ -399,14 +412,14 @@ export async function listSales(filters: {
      LEFT JOIN users st ON st.id = s.staff_id
      ${clause}
      ORDER BY s.created_at DESC
-     LIMIT 500`,
-    params
+     LIMIT $${limitParam} OFFSET $${offsetParam}`,
+    [...params, filters.pageSize, (filters.page - 1) * filters.pageSize]
   );
-  return rows;
+  return { rows, total };
 }
 
-export async function listMySales(staffId: string) {
-  return listSales({ staffId });
+export async function listMySales(staffId: string, pagination: { page: number; pageSize: number }) {
+  return listSales({ staffId, ...pagination });
 }
 
 export async function voidSale(id: string, reason: string | undefined) {

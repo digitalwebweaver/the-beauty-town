@@ -4,6 +4,10 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2022"],
+    // Only used by the PDF report templates (backend/src/reports/*.tsx),
+    // which render via @react-pdf/renderer, not the DOM — everything else
+    // in this backend is plain .ts.
+    "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",

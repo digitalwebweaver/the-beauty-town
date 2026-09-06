@@ -88,3 +88,20 @@ export const guestBookingLimiter = rateLimit({
     error: { message: 'Too many booking attempts. Try again later.' },
   },
 });
+
+/**
+ * Report generation limiter: 20 / 15 min / IP. Rendering a PDF (several
+ * aggregation queries + laying out a document) is meaningfully heavier
+ * than a typical JSON response — this is admin-only already, so the cap
+ * just guards against an accidental tight retry loop, not real abuse.
+ */
+export const reportGenerationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { message: 'Too many report requests. Try again in a few minutes.' },
+  },
+});

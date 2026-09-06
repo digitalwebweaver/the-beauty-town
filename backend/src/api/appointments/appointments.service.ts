@@ -239,6 +239,17 @@ export async function createAppointment(input: CreateInput) {
 
     // 2. If a specific staff was requested, verify they exist and are staff.
     //    If null, we auto-pick a free staff (simple round-robin by availability).
+    //
+    //    Neither the availability check below nor the auto-assign query
+    //    further down takes any row lock, so two concurrent requests for
+    //    the same staff + overlapping time can both read "available" and
+    //    both proceed to INSERT. That's fine: the `no_double_booking`
+    //    EXCLUDE constraint on the table (caught below as 23P01) is the
+    //    real backstop and always wins — this TOCTOU window can only ever
+    //    produce a clean 409 for the loser, never an actual double-booked
+    //    slot, so it's left as-is rather than adding locking here that
+    //    would need careful ordering against the capacity check above to
+    //    avoid a new deadlock risk, for a case with no live bug.
     let staffId = input.staffId;
 
     if (staffId) {
@@ -373,7 +384,41 @@ export async function getAppointmentById(id: string, client?: any) {
   return rows[0];
 }
 
-export async function listMyAppointments(customerId: string) {
+interface Pagination {
+  page?: number;
+  pageSize?: number;
+}
+
+// Shared "give me everything if no page/pageSize was asked for" pagination
+// helper — see appointments.validator.ts's pageQuery comment for why: this
+// list is used both by widget-style callers that want every row matching
+// an already-narrow filter (today's board, this week's schedule) and by
+// admin/staff tables that need real paging over a large, loosely-filtered
+// result. Returns the LIMIT/OFFSET clause (or '' when not paginating) plus
+// the two extra params to append, and the resolved page/pageSize for the
+// response envelope.
+function resolvePagination(pagination: Pagination, paramCountBefore: number) {
+  const paginate = pagination.page !== undefined || pagination.pageSize !== undefined;
+  const page = pagination.page ?? 1;
+  const pageSize = pagination.pageSize ?? 20;
+  const clause = paginate ? `LIMIT $${paramCountBefore + 1} OFFSET $${paramCountBefore + 2}` : '';
+  return {
+    paginate,
+    page,
+    pageSize,
+    clause,
+    extraParams: paginate ? [pageSize, (page - 1) * pageSize] : [],
+  };
+}
+
+export async function listMyAppointments(customerId: string, pagination: Pagination) {
+  const countRes = await query<{ count: string }>(
+    `SELECT COUNT(*) FROM appointments a WHERE a.customer_id = $1`,
+    [customerId]
+  );
+  const total = Number(countRes.rows[0].count);
+  const { paginate, page, pageSize, clause, extraParams } = resolvePagination(pagination, 1);
+
   const { rows } = await query(
     `SELECT a.id, a.appointment_date, a.start_time, a.end_time, a.status, a.total_inr, a.notes,
             st.id AS staff_id, st.name AS staff_name,
@@ -388,13 +433,20 @@ export async function listMyAppointments(customerId: string) {
      LEFT JOIN users st ON st.id = a.staff_id
      WHERE a.customer_id = $1
      ORDER BY a.appointment_date DESC, a.start_time DESC
-     LIMIT 200`,
-    [customerId]
+     ${clause}`,
+    [customerId, ...extraParams]
   );
-  return rows;
+  return { rows, total, paginate, page, pageSize };
 }
 
-export async function listStaffAppointments(staffId: string) {
+export async function listStaffAppointments(staffId: string, pagination: Pagination) {
+  const countRes = await query<{ count: string }>(
+    `SELECT COUNT(*) FROM appointments a WHERE a.staff_id = $1`,
+    [staffId]
+  );
+  const total = Number(countRes.rows[0].count);
+  const { paginate, page, pageSize, clause, extraParams } = resolvePagination(pagination, 1);
+
   const { rows } = await query(
     `SELECT a.id, a.appointment_date, a.start_time, a.end_time, a.status, a.total_inr,
             cu.name AS customer_name, cu.phone AS customer_phone,
@@ -409,24 +461,26 @@ export async function listStaffAppointments(staffId: string) {
      JOIN users cu ON cu.id = a.customer_id
      WHERE a.staff_id = $1
      ORDER BY a.appointment_date DESC, a.start_time DESC
-     LIMIT 200`,
-    [staffId]
+     ${clause}`,
+    [staffId, ...extraParams]
   );
-  return rows;
+  return { rows, total, paginate, page, pageSize };
 }
 
-export async function listAllAppointments(filters: {
-  status?: string;
-  from?: string;
-  to?: string;
-  q?: string;
-  staffId?: string;
-}) {
+export async function listAllAppointments(
+  filters: {
+    status?: string[];
+    from?: string;
+    to?: string;
+    q?: string;
+    staffId?: string;
+  } & Pagination
+) {
   const where: string[] = [];
   const params: unknown[] = [];
-  if (filters.status) {
+  if (filters.status?.length) {
     params.push(filters.status);
-    where.push(`a.status = $${params.length}`);
+    where.push(`a.status = ANY($${params.length}::appointment_status[])`);
   }
   if (filters.staffId) {
     params.push(filters.staffId);
@@ -446,6 +500,22 @@ export async function listAllAppointments(filters: {
   }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
+  const countRes = await query<{ count: string }>(
+    `SELECT COUNT(*) FROM appointments a
+     JOIN users cu ON cu.id = a.customer_id
+     LEFT JOIN users st ON st.id = a.staff_id
+     ${clause}`,
+    params
+  );
+  const total = Number(countRes.rows[0].count);
+
+  const {
+    paginate,
+    page,
+    pageSize,
+    clause: limitClause,
+    extraParams,
+  } = resolvePagination(filters, params.length);
   const { rows } = await query(
     `SELECT a.id, a.appointment_date, a.start_time, a.end_time, a.status, a.total_inr,
             cu.name AS customer_name, cu.phone AS customer_phone,
@@ -462,10 +532,10 @@ export async function listAllAppointments(filters: {
      LEFT JOIN users st ON st.id = a.staff_id
      ${clause}
      ORDER BY a.appointment_date DESC, a.start_time DESC
-     LIMIT 500`,
-    params
+     ${limitClause}`,
+    [...params, ...extraParams]
   );
-  return rows;
+  return { rows, total, paginate, page, pageSize };
 }
 
 export async function transferAppointment(id: string, newStaffId: string) {
@@ -493,17 +563,43 @@ export async function transferAppointment(id: string, newStaffId: string) {
   return getAppointmentById(id);
 }
 
+// What each status may legally move to. Nothing is listed as a valid
+// "from" state for the three terminal statuses below (completed/cancelled/
+// no_show don't appear as a key), so e.g. an already-cancelled appointment
+// can never be flipped to completed — previously this UPDATE had no
+// transition guard at all and would silently accept exactly that.
+const ALLOWED_FROM_STATUSES: Record<string, string[]> = {
+  pending: ['pending', 'confirmed'],
+  confirmed: ['pending', 'confirmed'],
+  in_progress: ['pending', 'confirmed', 'in_progress'],
+  completed: ['pending', 'confirmed', 'in_progress'],
+  cancelled: ['pending', 'confirmed', 'in_progress'],
+  no_show: ['pending', 'confirmed', 'in_progress'],
+};
+
 export async function updateAppointmentStatus(id: string, status: string) {
+  const allowedFrom = ALLOWED_FROM_STATUSES[status];
+  if (!allowedFrom) throw ApiError.badRequest(`Invalid status: ${status}`);
+
   const { rows, rowCount } = await query(
     `UPDATE appointments
      SET status = $2::appointment_status,
          cancelled_at = CASE WHEN $2 = 'cancelled' THEN NOW() ELSE cancelled_at END,
          completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END
-     WHERE id = $1
+     WHERE id = $1 AND status = ANY($3::appointment_status[])
      RETURNING id`,
-    [id, status]
+    [id, status, allowedFrom]
   );
-  if (!rowCount) throw ApiError.notFound('Appointment not found');
+  if (!rowCount) {
+    // Either the appointment doesn't exist, or (far more likely once this
+    // guard is in place) it does but has already moved to a state this
+    // transition can no longer apply to — e.g. someone else already
+    // cancelled it. Distinguish the two so the caller gets an accurate
+    // error instead of a blanket 404.
+    const exists = await query(`SELECT 1 FROM appointments WHERE id = $1`, [id]);
+    if (!exists.rowCount) throw ApiError.notFound('Appointment not found');
+    throw ApiError.conflict("That appointment's status already changed.");
+  }
   const appt = await getAppointmentById(rows[0].id);
   if (status === 'cancelled') await notifyCancelledAppointment(appt).catch(() => {});
   return appt;

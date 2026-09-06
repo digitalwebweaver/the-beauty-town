@@ -32,6 +32,7 @@ import analyticsRoutes from '@/api/analytics/analytics.routes';
 import contactRoutes from '@/api/contact/contact.routes';
 import holidaysRoutes from '@/api/holidays/holidays.routes';
 import pushRoutes from '@/api/push/push.routes';
+import reportsRoutes from '@/api/reports/reports.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -98,6 +99,7 @@ export function createApp(): Express {
   app.use('/api/contact', contactRoutes);
   app.use('/api/holidays', holidaysRoutes);
   app.use('/api/push', pushRoutes);
+  app.use('/api/reports', reportsRoutes);
   // app.use('/api/uploads', uploadsRoutes); // see TODO near the import above
 
   // 404 + error handler MUST be last

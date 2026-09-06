@@ -20,6 +20,8 @@ import {
   cancelAppointmentSchema,
   createAppointmentSchema,
   guestBookingSchema,
+  listAllAppointmentsQuery,
+  myAppointmentsQuery,
   transferSchema,
   updateStatusSchema,
 } from './appointments.validator';
@@ -41,7 +43,13 @@ router.post(
 // Guest — no account needed. Resolves/creates the customer record from
 // name/phone/email, then books through the same transactional path.
 router.post('/guest', guestBookingLimiter, validate(guestBookingSchema), postGuestAppointment);
-router.get('/mine', authenticate, requireRole('customer'), getMyAppointments);
+router.get(
+  '/mine',
+  authenticate,
+  requireRole('customer'),
+  validate(myAppointmentsQuery, 'query'),
+  getMyAppointments
+);
 router.patch(
   '/:id/cancel',
   authenticate,
@@ -51,7 +59,13 @@ router.patch(
 );
 
 // Staff
-router.get('/staff/mine', authenticate, requireRole('staff'), getStaffOwnAppointments);
+router.get(
+  '/staff/mine',
+  authenticate,
+  requireRole('staff'),
+  validate(myAppointmentsQuery, 'query'),
+  getStaffOwnAppointments
+);
 
 // Admin / staff status update
 router.patch(
@@ -72,7 +86,13 @@ router.patch(
 );
 
 // Admin + staff listing (both see all appointments)
-router.get('/', authenticate, requireRole('admin', 'staff'), getAllAppointments);
+router.get(
+  '/',
+  authenticate,
+  requireRole('admin', 'staff'),
+  validate(listAllAppointmentsQuery, 'query'),
+  getAllAppointments
+);
 
 // Detail — admin sees any appointment; customer/staff only their own
 // (ownership check lives in the controller, since it needs the row first).

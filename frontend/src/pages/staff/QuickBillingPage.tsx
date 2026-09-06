@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/select';
 import PageHeader from '@/components/common/PageHeader';
 import StatusBadge from '@/components/common/StatusBadge';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ROUTES } from '@/constants/routes';
 import api from '@/lib/axios';
 import { apiError } from '@/lib/apiError';
@@ -153,14 +154,21 @@ function QuickBillingPage() {
     );
   }, [billableAppointments, apptSearch]);
 
+  // Both filters below run against the full in-memory catalog/customer list
+  // on every keystroke (no network request — this is a live-updating POS
+  // cart, not a server-paginated table) — debounced so a fast typist
+  // doesn't force a re-filter of a large list on every single character.
+  const debouncedCustomerSearch = useDebouncedValue(customerSearch, 150);
+  const debouncedItemSearch = useDebouncedValue(itemSearch, 150);
+
   const filteredCustomers = useMemo(() => {
     const list = customers.data ?? [];
-    if (!customerSearch) return list.slice(0, 30);
-    const q = customerSearch.toLowerCase();
+    if (!debouncedCustomerSearch) return list.slice(0, 30);
+    const q = debouncedCustomerSearch.toLowerCase();
     return list
       .filter((c) => c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(q))
       .slice(0, 30);
-  }, [customers.data, customerSearch]);
+  }, [customers.data, debouncedCustomerSearch]);
 
   const activeServices = useMemo(
     () => (services.data ?? []).filter((s) => s.is_active),
@@ -172,16 +180,25 @@ function QuickBillingPage() {
   );
   const activePackages = useMemo(() => packages.data ?? [], [packages.data]);
   const shownServices = useMemo(
-    () => activeServices.filter((s) => s.name.toLowerCase().includes(itemSearch.toLowerCase())),
-    [activeServices, itemSearch]
+    () =>
+      activeServices.filter((s) =>
+        s.name.toLowerCase().includes(debouncedItemSearch.toLowerCase())
+      ),
+    [activeServices, debouncedItemSearch]
   );
   const shownProducts = useMemo(
-    () => activeProducts.filter((p) => p.name.toLowerCase().includes(itemSearch.toLowerCase())),
-    [activeProducts, itemSearch]
+    () =>
+      activeProducts.filter((p) =>
+        p.name.toLowerCase().includes(debouncedItemSearch.toLowerCase())
+      ),
+    [activeProducts, debouncedItemSearch]
   );
   const shownPackages = useMemo(
-    () => activePackages.filter((p) => p.name.toLowerCase().includes(itemSearch.toLowerCase())),
-    [activePackages, itemSearch]
+    () =>
+      activePackages.filter((p) =>
+        p.name.toLowerCase().includes(debouncedItemSearch.toLowerCase())
+      ),
+    [activePackages, debouncedItemSearch]
   );
 
   function switchMode(next: 'walkin' | 'existing' | 'appointment') {

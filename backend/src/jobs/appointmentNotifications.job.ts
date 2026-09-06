@@ -105,14 +105,22 @@ let task: ScheduledTask | null = null;
 export function startAppointmentNotificationsJob(): void {
   if (task) return;
   // Every 15 minutes — frequent enough to reliably catch the 2-hour
-  // window, infrequent enough that it's never noticeable load.
-  task = cron.schedule('*/15 * * * *', () => {
-    checkUnconfirmedBookings().catch((err) => {
-      logger.error('appointmentNotifications job failed', {
-        error: err instanceof Error ? err.message : String(err),
+  // window, infrequent enough that it's never noticeable load. `noOverlap`
+  // skips a tick instead of stacking it if a previous run is still going
+  // (e.g. a slow email/push send) — without it, two overlapping runs could
+  // both see the same unconfirmed_alert_sent_at IS NULL rows and each
+  // send a duplicate alert.
+  task = cron.schedule(
+    '*/15 * * * *',
+    () => {
+      checkUnconfirmedBookings().catch((err) => {
+        logger.error('appointmentNotifications job failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
-    });
-  });
+    },
+    { noOverlap: true }
+  );
   logger.info('🕐 appointmentNotifications job started (every 15 min)');
 }
 

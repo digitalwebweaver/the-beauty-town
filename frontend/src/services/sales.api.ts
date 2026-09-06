@@ -99,19 +99,34 @@ export function useCreateSale() {
   });
 }
 
-export function useSales(filters?: {
+export interface PaginatedSales {
+  data: SaleListItemDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+// Genuinely paginated + server-side searched — SalesHistoryPage used to
+// fetch this same (backend-capped) list in full and window it with a
+// client-side `.slice()`; now the server does both the filtering and the
+// paging, so an unfiltered/wide-range query no longer means "fetch the
+// salon's entire sales history in one response."
+export function useSales(filters: {
   status?: string;
   staffId?: string;
   from?: string;
   to?: string;
   q?: string;
+  page: number;
+  pageSize: number;
 }) {
   return useQuery({
-    queryKey: [...KEY, 'all', filters ?? {}],
+    queryKey: [...KEY, 'all', filters],
     queryFn: async () => {
       const { data } = await api.get('/sales', { params: filters });
-      return data.data as SaleListItemDto[];
+      return data as PaginatedSales;
     },
+    placeholderData: (prev) => prev,
   });
 }
 

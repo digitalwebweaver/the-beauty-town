@@ -46,6 +46,7 @@ import {
   ProfilePage,
   QuickBillingPage,
   RegisterPage,
+  ReportsPage,
   SalesHistoryPage,
   SchedulePage,
   ServicesManagementPage,
@@ -118,6 +119,7 @@ createRoot(document.getElementById('root')!).render(
                       <Route path={ROUTES.adminInventory} element={<InventoryPage />} />
                       <Route path={ROUTES.adminBilling} element={<QuickBillingPage />} />
                       <Route path={ROUTES.adminSales} element={<SalesHistoryPage />} />
+                      <Route path={ROUTES.adminReports} element={<ReportsPage />} />
                       <Route path={ROUTES.adminSettings} element={<SettingsPage />} />
                       <Route path={ROUTES.adminBook} element={<BookAppointmentPage />} />
                       <Route path={ROUTES.adminCoupons} element={<CouponsPage />} />

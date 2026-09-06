@@ -1,5 +1,5 @@
 import { asyncHandler } from '@/utils/asyncHandler';
-import { ok } from '@/utils/ApiResponse';
+import { ok, paginated } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
 import {
   busySlots,
@@ -53,14 +53,28 @@ export const postGuestAppointment = asyncHandler(async (req, res) => {
 
 export const getMyAppointments = asyncHandler(async (req, res) => {
   if (!req.user) throw ApiError.unauthorized();
-  const data = await listMyAppointments(req.user.sub);
-  res.json(ok(data));
+  const { page, pageSize } = req.query as unknown as { page?: number; pageSize?: number };
+  const {
+    rows,
+    total,
+    paginate,
+    page: p,
+    pageSize: ps,
+  } = await listMyAppointments(req.user.sub, { page, pageSize });
+  res.json(paginate ? paginated(rows, p, ps, total) : ok(rows));
 });
 
 export const getStaffOwnAppointments = asyncHandler(async (req, res) => {
   if (!req.user) throw ApiError.unauthorized();
-  const data = await listStaffAppointments(req.user.sub);
-  res.json(ok(data));
+  const { page, pageSize } = req.query as unknown as { page?: number; pageSize?: number };
+  const {
+    rows,
+    total,
+    paginate,
+    page: p,
+    pageSize: ps,
+  } = await listStaffAppointments(req.user.sub, { page, pageSize });
+  res.json(paginate ? paginated(rows, p, ps, total) : ok(rows));
 });
 
 export const getAppointment = asyncHandler(async (req, res) => {
@@ -78,18 +92,29 @@ export const getAppointment = asyncHandler(async (req, res) => {
 
 export const getAllAppointments = asyncHandler(async (req, res) => {
   if (!req.user) throw ApiError.unauthorized();
+  const q = req.query as unknown as {
+    status?: string[];
+    from?: string;
+    to?: string;
+    q?: string;
+    staffId?: string;
+    page?: number;
+    pageSize?: number;
+  };
   const isStaff = req.user.role === 'staff';
   // Staff can only see their own appointments, always.
   // Admin can see everything, or filter by ?staffId=... to see one staff.
-  const staffId = isStaff ? req.user.sub : (req.query.staffId as string | undefined);
-  const data = await listAllAppointments({
-    status: req.query.status as string | undefined,
-    from: req.query.from as string | undefined,
-    to: req.query.to as string | undefined,
-    q: req.query.q as string | undefined,
+  const staffId = isStaff ? req.user.sub : q.staffId;
+  const { rows, total, paginate, page, pageSize } = await listAllAppointments({
+    status: q.status,
+    from: q.from,
+    to: q.to,
+    q: q.q,
     staffId,
+    page: q.page,
+    pageSize: q.pageSize,
   });
-  res.json(ok(data));
+  res.json(paginate ? paginated(rows, page, pageSize, total) : ok(rows));
 });
 
 export const patchStatus = asyncHandler(async (req, res) => {

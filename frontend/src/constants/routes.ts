@@ -31,6 +31,7 @@ export const ROUTES = {
   adminInventory: '/admin/inventory',
   adminBilling: '/admin/billing',
   adminSales: '/admin/sales',
+  adminReports: '/admin/reports',
   adminSettings: '/admin/settings',
   adminBook: '/admin/book',
   adminCoupons: '/admin/coupons',

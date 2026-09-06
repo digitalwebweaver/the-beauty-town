@@ -19,6 +19,13 @@ export const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
+  // Without this, one wedged/slow query inside a transaction (e.g. stuck
+  // behind a lock held by another connection) can hold a pool connection
+  // indefinitely — out of only 20 total — starving every other request.
+  // 15s is generous for anything this app actually does; a query that
+  // needs longer than that is itself a bug worth surfacing, not something
+  // to let run forever.
+  statement_timeout: 15_000,
 });
 
 pool.on('error', (err) => {

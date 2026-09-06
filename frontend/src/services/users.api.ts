@@ -14,11 +14,38 @@ export interface CustomerRow {
   lifetime_inr: string;
 }
 
+// Unpaginated — returns every customer. Only for the couple of internal
+// pickers that need the full list to search client-side as someone types
+// (Quick Bill's "existing customer" search, staff booking-for-a-customer):
+// omitting page/pageSize entirely puts the backend in its "give me
+// everything" mode (see users.routes.ts). Not for anywhere rendering a
+// full table — use useCustomersPaged for that.
 export function useCustomers(opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['customers'],
     queryFn: async () => (await api.get('/users/customers')).data.data as CustomerRow[],
     enabled: opts?.enabled ?? true,
+  });
+}
+
+export interface PaginatedCustomers {
+  data: CustomerRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+// Genuinely paginated + server-side searched — for the admin Customers
+// table, which used to fetch this same unbounded list and filter/paginate
+// it entirely client-side.
+export function useCustomersPaged(filters: { q?: string; page: number; pageSize: number }) {
+  return useQuery({
+    queryKey: ['customers', 'paged', filters],
+    queryFn: async () => {
+      const { data } = await api.get('/users/customers', { params: filters });
+      return data as PaginatedCustomers;
+    },
+    placeholderData: (prev) => prev,
   });
 }
 

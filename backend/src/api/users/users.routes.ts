@@ -6,7 +6,7 @@ import { requireRole } from '@/middlewares/role';
 import { validate } from '@/middlewares/validate';
 import { query, withTransaction } from '@/config/db';
 import { asyncHandler } from '@/utils/asyncHandler';
-import { ok } from '@/utils/ApiResponse';
+import { ok, paginated } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
 import { imageRef, nameField, phoneField, uuidString } from '@/utils/zodHelpers';
 import { createAppointment } from '@/api/appointments/appointments.service';
@@ -75,20 +75,64 @@ router.patch(
   })
 );
 
+const listCustomersQuery = z.object({
+  q: z.string().max(120).optional(),
+  // Both left un-defaulted on purpose: a couple of internal pickers (Quick
+  // Bill's "existing customer" search, staff booking-for-a-customer) need
+  // the FULL customer list to search client-side as someone types — same
+  // "unpaginated is fine, this caller genuinely wants everything" reasoning
+  // as services.repository.ts's public listServices vs listServicesAdmin
+  // split. Passing neither param returns every row (no LIMIT at all);
+  // passing either one switches into paginated mode.
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 // Admin + staff: list customers with lifetime value + visit count. Staff
 // need read access here too — it's how the "book for a customer" flow
 // looks up an existing customer by phone before creating a duplicate.
+//
+// Genuinely paginated + server-side searched when the caller asks for a
+// page — this used to be a flat `LIMIT 500` ordered by spend with no
+// `q`/`page` at all, which meant any customer outside the top 500 by
+// lifetime value (including one an admin was actively trying to look up
+// by phone) was simply invisible. Same COUNT(*) + LIMIT/OFFSET shape as
+// `listServicesAdmin`. See listCustomersQuery above for the unpaginated
+// "give me everything" mode a couple of internal pickers still rely on.
 router.get(
   '/customers',
   authenticate,
   requireRole('admin', 'staff'),
-  asyncHandler(async (_req, res) => {
+  validate(listCustomersQuery, 'query'),
+  asyncHandler(async (req, res) => {
+    const { q, page, pageSize } = req.query as unknown as z.infer<typeof listCustomersQuery>;
+    const paginate = page !== undefined || pageSize !== undefined;
+    const effPage = page ?? 1;
+    const effPageSize = pageSize ?? 25;
+
+    const clauses: string[] = [`u.role = 'customer'`];
+    const params: unknown[] = [];
+    if (q?.trim()) {
+      params.push(`%${q.trim()}%`);
+      const p = `$${params.length}`;
+      clauses.push(`(u.name ILIKE ${p} OR u.email ILIKE ${p} OR u.phone ILIKE ${p})`);
+    }
+    const where = `WHERE ${clauses.join(' AND ')}`;
+
+    const countRes = await query<{ count: string }>(
+      `SELECT COUNT(*) FROM users u ${where}`,
+      params
+    );
+    const total = Number(countRes.rows[0].count);
+
     // "Visits" stays booking-based (completed appointments). "Lifetime
     // value" is actual money collected — completed sales, not the quoted
     // price on an appointment — including pure walk-in POS purchases with
     // no appointment at all, matched by customer_id or (for older tickets
     // rung up before the link existed) the same phone-last-10-digits
     // comparison used everywhere else in the app.
+    const limitClause = paginate ? `LIMIT $${params.length + 1} OFFSET $${params.length + 2}` : '';
+    const queryParams = paginate ? [...params, effPageSize, (effPage - 1) * effPageSize] : params;
     const { rows } = await query(
       `SELECT u.id,
               u.name,
@@ -118,11 +162,12 @@ router.get(
              )
            )
        ) sv ON true
-       WHERE u.role = 'customer'
+       ${where}
        ORDER BY lifetime_inr DESC, u.created_at DESC
-       LIMIT 500`
+       ${limitClause}`,
+      queryParams
     );
-    res.json(ok(rows));
+    res.json(paginate ? paginated(rows, effPage, effPageSize, total) : ok(rows));
   })
 );
 

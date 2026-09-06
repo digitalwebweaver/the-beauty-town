@@ -3,7 +3,7 @@ import { authenticate } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/role';
 import { validate } from '@/middlewares/validate';
 import { getAllSales, getMySales, getSale, patchVoidSale, postSale } from './sales.controller';
-import { createSaleSchema, voidSaleSchema } from './sales.validator';
+import { createSaleSchema, listSalesQuery, myPageQuery, voidSaleSchema } from './sales.validator';
 
 const router = Router();
 
@@ -11,10 +11,16 @@ const router = Router();
 router.post('/', authenticate, requireRole('staff', 'admin'), validate(createSaleSchema), postSale);
 
 // A staff member's own till, e.g. "what have I rung up today".
-router.get('/mine', authenticate, requireRole('staff'), getMySales);
+router.get('/mine', authenticate, requireRole('staff'), validate(myPageQuery, 'query'), getMySales);
 
 // Admin + staff listing (staff always scoped to their own sales — see controller).
-router.get('/', authenticate, requireRole('staff', 'admin'), getAllSales);
+router.get(
+  '/',
+  authenticate,
+  requireRole('staff', 'admin'),
+  validate(listSalesQuery, 'query'),
+  getAllSales
+);
 
 router.get('/:id', authenticate, requireRole('staff', 'admin'), getSale);
 

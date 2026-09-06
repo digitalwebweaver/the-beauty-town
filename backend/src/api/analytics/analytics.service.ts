@@ -6,6 +6,36 @@ function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+interface GlobalsRow {
+  lifetime_revenue_inr: string;
+  total_customers: string;
+  active_staff: string;
+  appointments_today: string;
+}
+
+// `lifetime_revenue_inr` and `total_customers` are full-table aggregates
+// with no time bound at all — every completed sale ever rung up, every
+// customer ever registered — recomputed on every single dashboard load.
+// The dashboard gets refreshed/polled far more often than these figures
+// meaningfully change, so a short in-process cache avoids re-scanning the
+// whole table on each request without needing new infra (Redis etc.) for
+// a number this cheap to keep briefly stale.
+const GLOBALS_CACHE_TTL_MS = 60_000;
+let globalsCache: { data: GlobalsRow; expiresAt: number } | null = null;
+
+async function getGlobals(): Promise<GlobalsRow> {
+  if (globalsCache && globalsCache.expiresAt > Date.now()) return globalsCache.data;
+  const { rows } = await query<GlobalsRow>(
+    `SELECT
+       (SELECT COALESCE(SUM(total_inr),0) FROM sales WHERE status='completed') AS lifetime_revenue_inr,
+       (SELECT COUNT(*) FROM users WHERE role='customer') AS total_customers,
+       (SELECT COUNT(*) FROM staff_profiles WHERE is_active) AS active_staff,
+       (SELECT COUNT(*) FROM appointments WHERE appointment_date = CURRENT_DATE) AS appointments_today`
+  );
+  globalsCache = { data: rows[0], expiresAt: Date.now() + GLOBALS_CACHE_TTL_MS };
+  return globalsCache.data;
+}
+
 /**
  * Everything the admin analytics dashboard needs, for a given trailing
  * window (`days`). One call, ~14 independent read queries run in parallel —
@@ -38,18 +68,7 @@ export async function getDashboardAnalytics(days: number) {
     couponPerfRes,
     reviewsRes,
   ] = await Promise.all([
-    query<{
-      lifetime_revenue_inr: string;
-      total_customers: string;
-      active_staff: string;
-      appointments_today: string;
-    }>(
-      `SELECT
-         (SELECT COALESCE(SUM(total_inr),0) FROM sales WHERE status='completed') AS lifetime_revenue_inr,
-         (SELECT COUNT(*) FROM users WHERE role='customer') AS total_customers,
-         (SELECT COUNT(*) FROM staff_profiles WHERE is_active) AS active_staff,
-         (SELECT COUNT(*) FROM appointments WHERE appointment_date = CURRENT_DATE) AS appointments_today`
-    ),
+    getGlobals(),
     query<{
       revenue_inr: string;
       sales_count: string;
@@ -237,7 +256,7 @@ export async function getDashboardAnalytics(days: number) {
     });
   }
 
-  const g = globals.rows[0];
+  const g = globals;
   const s = summary.rows[0];
   const revenueInr = Number(s.revenue_inr);
   const prevRevenueInr = Number(s.prev_revenue_inr);

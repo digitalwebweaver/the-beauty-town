@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Eye, Loader2, Plus, Search } from 'lucide-react';
@@ -36,6 +36,8 @@ import {
 } from '@/components/ui/table';
 import PageHeader from '@/components/common/PageHeader';
 import EmptyTableRow from '@/components/common/EmptyTableRow';
+import SectionError from '@/components/common/SectionError';
+import Pagination from '@/components/common/Pagination';
 import { apiError } from '@/lib/apiError';
 import { imageUrl } from '@/lib/imageUrl';
 import { TIME_SLOTS } from '@/lib/mockData';
@@ -43,9 +45,12 @@ import { cn } from '@/lib/utils';
 import { formatCreatedAt, formatTime } from '@/lib/formatDate';
 import { digitsOnly, lettersOnly, nameInputProps, phoneInputProps } from '@/lib/inputHelpers';
 import { ROUTES } from '@/constants/routes';
-import { useCreateWalkInCustomer, useCustomers } from '@/services/users.api';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useCreateWalkInCustomer, useCustomersPaged } from '@/services/users.api';
 import { useServices } from '@/services/services.api';
 import { useStaff } from '@/services/staff.api';
+
+const PAGE_SIZE = 25;
 
 // -------- Walk-in dialog --------
 
@@ -271,19 +276,22 @@ function AddWalkInDialog({
 
 function CustomersPage() {
   const [q, setQ] = useState('');
-  const { data, isLoading } = useCustomers();
+  const debouncedQ = useDebouncedValue(q);
+  const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    return data.filter(
-      (c) =>
-        !q ||
-        c.name.toLowerCase().includes(q.toLowerCase()) ||
-        c.email.toLowerCase().includes(q.toLowerCase()) ||
-        (c.phone ?? '').includes(q)
-    );
-  }, [data, q]);
+  // Reset to page 1 whenever the search term actually changes (after
+  // debounce) — same "adjust state during render" pattern as
+  // ServicesManagementPage, so a fresh search never lands on a stale page
+  // number that happens to be past the new result count.
+  const [appliedQ, setAppliedQ] = useState(debouncedQ);
+  if (debouncedQ !== appliedQ) {
+    setAppliedQ(debouncedQ);
+    setPage(1);
+  }
+
+  const customers = useCustomersPaged({ q: debouncedQ || undefined, page, pageSize: PAGE_SIZE });
+  const list = customers.data?.data ?? [];
 
   return (
     <div>
@@ -309,62 +317,78 @@ function CustomersPage() {
             />
           </div>
 
-          {isLoading ? (
+          {customers.isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 rounded-lg" />
               ))}
             </div>
+          ) : customers.isError ? (
+            <SectionError
+              message="Couldn't load customers right now."
+              onRetry={() => customers.refetch()}
+            />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Visits</TableHead>
-                  <TableHead>Lifetime value</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 && (
-                  <EmptyTableRow
-                    colSpan={6}
-                    message={q ? 'No customers match your search.' : 'No customers yet.'}
-                  />
-                )}
-                {filtered.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="max-w-[220px]">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="flex-shrink-0">
-                          <AvatarImage src={imageUrl(c.avatar_url)} alt={c.name} />
-                          <AvatarFallback>{c.name.slice(0, 2)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{c.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{c.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{c.phone ?? '—'}</TableCell>
-                    <TableCell>{formatCreatedAt(c.created_at)}</TableCell>
-                    <TableCell>{c.visits}</TableCell>
-                    <TableCell className="font-semibold">
-                      ₹{Number(c.lifetime_inr).toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={ROUTES.adminCustomerProfile(c.id)}>
-                          <Eye className="mr-1 h-4 w-4" /> View
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Visits</TableHead>
+                      <TableHead>Lifetime value</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {list.length === 0 && (
+                      <EmptyTableRow
+                        colSpan={6}
+                        message={q ? 'No customers match your search.' : 'No customers yet.'}
+                      />
+                    )}
+                    {list.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="max-w-[220px]">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="flex-shrink-0">
+                              <AvatarImage src={imageUrl(c.avatar_url)} alt={c.name} />
+                              <AvatarFallback>{c.name.slice(0, 2)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">{c.name}</p>
+                              <p className="truncate text-xs text-muted-foreground">{c.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{c.phone ?? '—'}</TableCell>
+                        <TableCell>{formatCreatedAt(c.created_at)}</TableCell>
+                        <TableCell>{c.visits}</TableCell>
+                        <TableCell className="font-semibold">
+                          ₹{Number(c.lifetime_inr).toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to={ROUTES.adminCustomerProfile(c.id)}>
+                              <Eye className="mr-1 h-4 w-4" /> View
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
+                className="mt-4"
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={customers.data?.total ?? 0}
+                onPageChange={setPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>

@@ -26,6 +26,12 @@ export function useMyAppointments(opts?: { enabled?: boolean }) {
   });
 }
 
+// Unpaginated by default — several widget-style callers (today's board,
+// this week's schedule, a staff dashboard's counts) intentionally want
+// EVERY row matching an already-narrow filter with no pagination UI of
+// their own. Omitting page/pageSize puts the backend in its "give me
+// everything matching this filter" mode (see appointments.validator.ts) —
+// use useAllAppointmentsPaged for a real admin/staff table instead.
 export function useAllAppointments(filters?: {
   status?: string;
   from?: string;
@@ -41,6 +47,56 @@ export function useAllAppointments(filters?: {
       return data.data as AppointmentListItem[];
     },
     enabled: enabled ?? true,
+  });
+}
+
+export interface PaginatedAppointments {
+  data: AppointmentListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+// Genuinely paginated + server-side searched — for admin/staff tables that
+// browse a potentially large, loosely-filtered result set. `status` accepts
+// several values at once (e.g. an "upcoming" tab meaning
+// pending+confirmed+in_progress) — built as a hand-rolled URLSearchParams
+// with one repeated `status=` key per value, same reasoning as
+// useSlotAvailability's serviceIds: axios's default array serializer
+// brackets it as `status[]=`, which Express's plain querystring parser
+// won't recognize as an array.
+export function useAllAppointmentsPaged(filters: {
+  status?: string | string[];
+  from?: string;
+  to?: string;
+  q?: string;
+  staffId?: string;
+  page: number;
+  pageSize: number;
+  enabled?: boolean;
+}) {
+  const { enabled, ...params } = filters;
+  return useQuery({
+    queryKey: ['appointments', 'all', 'paged', params],
+    queryFn: async () => {
+      const query = new URLSearchParams();
+      const statuses = params.status
+        ? Array.isArray(params.status)
+          ? params.status
+          : [params.status]
+        : [];
+      statuses.forEach((s) => query.append('status', s));
+      if (params.from) query.set('from', params.from);
+      if (params.to) query.set('to', params.to);
+      if (params.q) query.set('q', params.q);
+      if (params.staffId) query.set('staffId', params.staffId);
+      query.set('page', String(params.page));
+      query.set('pageSize', String(params.pageSize));
+      const { data } = await api.get('/appointments', { params: query });
+      return data as PaginatedAppointments;
+    },
+    enabled: enabled ?? true,
+    placeholderData: (prev) => prev,
   });
 }
 

@@ -250,6 +250,17 @@ async function checkEligibility(
   // Per-customer limit — match by linked account, else by phone (normalized
   // to the last 10 digits, same tolerant comparison used for guest-booking
   // dedupe, since a plain walk-in sale often has no customer_id at all).
+  //
+  // This COUNT-then-compare is a plain read with no lock of its own — it's
+  // race-safe today only because every real caller (createSale) reaches
+  // this via applyCoupon with the coupon row already locked FOR UPDATE, so
+  // two concurrent sales for the same customer + coupon serialize on that
+  // lock before either gets here. That's incidental, not enforced by this
+  // function: if a second call path to checkEligibility/recordRedemption
+  // is ever added without going through that same coupon-row lock, this
+  // reverts to a plain TOCTOU race. A `UNIQUE` constraint or advisory lock
+  // keyed to (coupon_id, customer_id/phone) would make it independently
+  // safe, but isn't worth adding for a limit with no live bug today.
   if (coupon.per_customer_limit !== null && (input.customerId || input.customerPhone)) {
     const countRes = await runner.query(
       `SELECT COUNT(*) FROM coupon_redemptions
