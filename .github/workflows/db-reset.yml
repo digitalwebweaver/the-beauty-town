@@ -38,11 +38,19 @@ jobs:
             set -e
             cd /var/www/the-beauty-town
 
-            # Load PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE without ever
+            # Read just the 5 vars we need out of .env.api without ever
             # printing them (no `set -x`, nothing below echoes $PGPASSWORD).
-            set -a
-            source .env.api
-            set +a
+            # NOT sourced as a script: Docker's env_file format is more
+            # lenient than real shell syntax (values don't need to be
+            # shell-quoted), so some other var in this file (SMTP/VAPID/
+            # OAuth secrets etc.) can easily contain characters that break
+            # bash's `source` even though Docker parses the file fine.
+            get_var() { grep -E "^$1=" .env.api | tail -1 | cut -d= -f2-; }
+            PGHOST=$(get_var PGHOST)
+            PGPORT=$(get_var PGPORT)
+            PGUSER=$(get_var PGUSER)
+            PGPASSWORD=$(get_var PGPASSWORD)
+            PGDATABASE=$(get_var PGDATABASE)
 
             PG_IMAGE="postgres:17-alpine"
             NET_ARGS="--add-host=host.docker.internal:host-gateway"
