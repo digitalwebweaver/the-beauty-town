@@ -1,4 +1,5 @@
 import { query } from '@/config/db';
+import { ApiError } from '@/utils/ApiError';
 
 export interface DbService {
   id: string;
@@ -221,4 +222,81 @@ export async function listCategories() {
      ORDER BY display_order ASC, label ASC`
   );
   return rows;
+}
+
+// Admin management view — includes archived categories too (unlike the
+// public listCategories above), same active/archived split convention as
+// listServicesAdmin vs listServices.
+export async function listCategoriesAdmin() {
+  const { rows } = await query(
+    `SELECT id, key, label, display_order, is_active
+     FROM service_categories
+     ORDER BY display_order ASC, label ASC`
+  );
+  return rows;
+}
+
+// `key` is permanent once created — it's not just a display label, it's
+// load-bearing: the public Services page's gender tabs filter categories
+// by `key.startsWith('male-'|'female-')`, and the gender-specific
+// "sectioned" view (frontend/src/lib/serviceSections.ts) matches several
+// of its catch-all rules directly against specific category keys (e.g.
+// `inCategory('female-hair')`). Renaming a key after the fact would
+// silently break both without any error. The gender prefix is baked into
+// the key itself for the same reason — there's no separate gender column
+// on this table.
+export async function createCategory(input: {
+  gender: 'male' | 'female';
+  label: string;
+  keySuffix: string;
+  displayOrder?: number;
+}) {
+  const key = `${input.gender}-${input.keySuffix}`;
+  try {
+    const { rows } = await query(
+      `INSERT INTO service_categories (key, label, display_order)
+       VALUES ($1, $2, $3)
+       RETURNING id, key, label, display_order, is_active`,
+      [key, input.label, input.displayOrder ?? 0]
+    );
+    return rows[0];
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      throw ApiError.conflict(`A category with the key "${key}" already exists`);
+    }
+    throw err;
+  }
+}
+
+// Label, display order, and active state only — never `key` (see
+// createCategory's comment for why).
+export async function updateCategory(
+  id: string,
+  input: Partial<{ label: string; displayOrder: number; isActive: boolean }>
+) {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const push = (col: string, val: unknown) => {
+    params.push(val);
+    sets.push(`${col} = $${params.length}`);
+  };
+  if (input.label !== undefined) push('label', input.label);
+  if (input.displayOrder !== undefined) push('display_order', input.displayOrder);
+  if (input.isActive !== undefined) push('is_active', input.isActive);
+  if (!sets.length) {
+    const { rows } = await query(
+      `SELECT id, key, label, display_order, is_active FROM service_categories WHERE id = $1`,
+      [id]
+    );
+    return rows[0] ?? null;
+  }
+
+  params.push(id);
+  const { rows } = await query(
+    `UPDATE service_categories SET ${sets.join(', ')}
+     WHERE id = $${params.length}
+     RETURNING id, key, label, display_order, is_active`,
+    params
+  );
+  return rows[0] ?? null;
 }

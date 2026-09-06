@@ -37,3 +37,20 @@ export const adminListServicesQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+// A category's key is always gender-prefixed ("male-..."/"female-...") —
+// the public Services page's gender tabs and the sectioned gender view
+// both key off that prefix (see services.repository.ts's createCategory
+// comment) — there's no "unisex" category, unlike services themselves.
+export const createCategorySchema = z.object({
+  gender: z.enum(['male', 'female']),
+  label: z.string().min(2).max(80),
+  displayOrder: z.coerce.number().int().min(0).max(999).optional(),
+});
+
+// `key` is deliberately not editable — see services.repository.ts.
+export const updateCategorySchema = z.object({
+  label: z.string().min(2).max(80).optional(),
+  displayOrder: z.coerce.number().int().min(0).max(999).optional(),
+  isActive: z.boolean().optional(),
+});

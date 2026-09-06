@@ -22,6 +22,7 @@ export const ROUTES = {
 
   admin: '/admin',
   adminServices: '/admin/services',
+  adminCategories: '/admin/categories',
   adminPackages: '/admin/packages',
   adminHolidays: '/admin/holidays',
   adminStaff: '/admin/staff',

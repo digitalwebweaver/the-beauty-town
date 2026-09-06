@@ -6,6 +6,7 @@ export interface ServiceCategoryDto {
   key: string;
   label: string;
   display_order: number;
+  is_active: boolean;
 }
 
 export interface ServiceDto {
@@ -29,6 +30,41 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: async () => (await api.get('/services/categories')).data.data as ServiceCategoryDto[],
+  });
+}
+
+// Admin management view — includes archived categories, unlike the public
+// useCategories() above.
+export function useAdminCategories() {
+  return useQuery({
+    queryKey: ['categories', 'admin'],
+    queryFn: async () =>
+      (await api.get('/services/categories/admin')).data.data as ServiceCategoryDto[],
+  });
+}
+
+export function useCreateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { gender: 'male' | 'female'; label: string; displayOrder?: number }) =>
+      (await api.post('/services/categories', body)).data.data as ServiceCategoryDto,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+}
+
+export function useUpdateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...patch
+    }: {
+      id: string;
+      label?: string;
+      displayOrder?: number;
+      isActive?: boolean;
+    }) => (await api.patch(`/services/categories/${id}`, patch)).data.data as ServiceCategoryDto,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 }
 

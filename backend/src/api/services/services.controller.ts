@@ -1,13 +1,17 @@
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ok, paginated } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
+import { setAuditContext } from '@/utils/auditContext';
 import {
+  createCategory,
   createService,
   deleteService,
   findServiceById,
   listCategories,
+  listCategoriesAdmin,
   listServices,
   listServicesAdmin,
+  updateCategory,
   updateService,
 } from './services.repository';
 
@@ -20,6 +24,38 @@ const slugify = (s: string) =>
 
 export const getCategories = asyncHandler(async (_req, res) => {
   res.json(ok(await listCategories()));
+});
+
+export const getAdminCategories = asyncHandler(async (_req, res) => {
+  res.json(ok(await listCategoriesAdmin()));
+});
+
+export const postCategory = asyncHandler(async (req, res) => {
+  const b = req.body;
+  const category = await createCategory({
+    gender: b.gender,
+    label: b.label,
+    keySuffix: slugify(b.label),
+    displayOrder: b.displayOrder,
+  });
+  setAuditContext(req, {
+    action: 'categories.created',
+    targetType: 'service_category',
+    targetId: category.id,
+    meta: { key: category.key, label: category.label },
+  });
+  res.status(201).json(ok(category));
+});
+
+export const patchCategory = asyncHandler(async (req, res) => {
+  const category = await updateCategory(req.params.id as string, req.body);
+  if (!category) throw ApiError.notFound('Category not found');
+  setAuditContext(req, {
+    action: 'categories.updated',
+    targetType: 'service_category',
+    targetId: category.id,
+  });
+  res.json(ok(category));
 });
 
 export const getServices = asyncHandler(async (req, res) => {

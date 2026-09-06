@@ -14,6 +14,7 @@ import {
   Settings,
   Sparkles,
   Tag,
+  Tags,
   UserCircle,
   UserCog,
   Users,
@@ -68,6 +69,7 @@ export const ADMIN_SECTIONS: NavEntry[] = [
     icon: Package,
     items: [
       { label: 'Services', href: ROUTES.adminServices, icon: ScissorsSquare },
+      { label: 'Categories', href: ROUTES.adminCategories, icon: Tags },
       { label: 'Packages', href: ROUTES.adminPackages, icon: Gift },
       { label: 'Inventory', href: ROUTES.adminInventory, icon: Package },
     ],

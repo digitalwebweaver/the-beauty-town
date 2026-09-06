@@ -25,6 +25,9 @@ export const ProfilePage = lazy(() => import('@/pages/common/ProfilePage'));
 
 export const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
 export const ServicesManagementPage = lazy(() => import('@/pages/admin/ServicesManagementPage'));
+export const CategoriesManagementPage = lazy(
+  () => import('@/pages/admin/CategoriesManagementPage')
+);
 export const PackagesManagementPage = lazy(() => import('@/pages/admin/PackagesManagementPage'));
 export const HolidaysPage = lazy(() => import('@/pages/admin/HolidaysPage'));
 export const StaffManagementPage = lazy(() => import('@/pages/admin/StaffManagementPage'));
