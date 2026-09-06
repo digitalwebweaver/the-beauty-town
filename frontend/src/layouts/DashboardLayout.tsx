@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import DashboardHeader from '@/components/layout/DashboardHeader';
 import MobileTabBar from '@/components/layout/MobileTabBar';
+import DashboardFooter from '@/components/layout/DashboardFooter';
 import InstallAppBanner from '@/components/common/InstallAppBanner';
 import type { NavEntry, NavItem } from '@/constants/navigation';
 
@@ -27,6 +28,9 @@ function DashboardLayout({ nav, sections, label }: DashboardLayoutProps) {
         <main className="flex-1 p-4 pb-24 md:p-8">
           <InstallAppBanner />
           <Outlet />
+          {/* Admin/staff only — a customer's own dashboard isn't the
+              place for a developer credit. */}
+          {(label === 'Admin' || label === 'Staff') && <DashboardFooter />}
         </main>
       </div>
       <MobileTabBar items={nav} label={label} />
