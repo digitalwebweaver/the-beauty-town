@@ -240,12 +240,14 @@ export function SimpleBarChart({
   color = CHART_COLORS[0],
   height = 200,
   valueFormatter = (v: number) => String(v),
+  name = 'Bookings',
 }: {
   data: Record<string, string | number>[];
   xKey: string;
   color?: string;
   height?: number;
   valueFormatter?: (v: number) => string;
+  name?: string;
 }) {
   const empty = data.every((d) => Number(d.count ?? 0) === 0);
   if (empty) {
@@ -279,7 +281,7 @@ export function SimpleBarChart({
           cursor={{ fill: 'var(--muted)' }}
           content={(props) => <ChartTooltip {...props} formatter={valueFormatter} />}
         />
-        <Bar dataKey="count" name="Bookings" fill={color} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="count" name={name} fill={color} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

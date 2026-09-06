@@ -38,6 +38,7 @@ export const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'));
 export const CouponsPage = lazy(() => import('@/pages/admin/CouponsPage'));
 export const CouponDesignerPage = lazy(() => import('@/pages/admin/CouponDesignerPage'));
 export const ReportsPage = lazy(() => import('@/pages/admin/ReportsPage'));
+export const AuditTrailPage = lazy(() => import('@/pages/admin/AuditTrailPage'));
 
 export const StaffDashboardPage = lazy(() => import('@/pages/staff/StaffDashboardPage'));
 export const SchedulePage = lazy(() => import('@/pages/staff/SchedulePage'));

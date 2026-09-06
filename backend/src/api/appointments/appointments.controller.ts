@@ -1,6 +1,7 @@
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ok, paginated } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
+import { setAuditContext } from '@/utils/auditContext';
 import {
   busySlots,
   cancelAppointment,
@@ -118,18 +119,38 @@ export const getAllAppointments = asyncHandler(async (req, res) => {
 });
 
 export const patchStatus = asyncHandler(async (req, res) => {
-  const updated = await updateAppointmentStatus(req.params.id as string, req.body.status);
+  const id = req.params.id as string;
+  const updated = await updateAppointmentStatus(id, req.body.status);
+  setAuditContext(req, {
+    action: 'appointments.status_changed',
+    targetType: 'appointment',
+    targetId: id,
+    meta: { toStatus: req.body.status },
+  });
   res.json(ok(updated));
 });
 
 export const transfer = asyncHandler(async (req, res) => {
-  const updated = await transferAppointment(req.params.id as string, req.body.newStaffId);
+  const id = req.params.id as string;
+  const updated = await transferAppointment(id, req.body.newStaffId);
+  setAuditContext(req, {
+    action: 'appointments.transferred',
+    targetType: 'appointment',
+    targetId: id,
+    meta: { newStaffId: req.body.newStaffId },
+  });
   res.json(ok(updated));
 });
 
 export const cancelMine = asyncHandler(async (req, res) => {
   if (!req.user) throw ApiError.unauthorized();
-  const updated = await cancelAppointment(req.params.id as string, req.user.sub, req.body?.reason);
+  const id = req.params.id as string;
+  const updated = await cancelAppointment(id, req.user.sub, req.body?.reason);
+  setAuditContext(req, {
+    action: 'appointments.cancelled',
+    targetType: 'appointment',
+    targetId: id,
+  });
   res.json(ok(updated));
 });
 

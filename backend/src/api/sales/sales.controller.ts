@@ -1,11 +1,18 @@
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ok, paginated } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
+import { setAuditContext } from '@/utils/auditContext';
 import { createSale, getSaleById, listMySales, listSales, voidSale } from './sales.service';
 
 export const postSale = asyncHandler(async (req, res) => {
   if (!req.user) throw ApiError.unauthorized();
   const sale = await createSale(req.body, req.user.sub);
+  setAuditContext(req, {
+    action: 'sales.created',
+    targetType: 'sale',
+    targetId: sale.id,
+    meta: { totalInr: sale.total_inr },
+  });
   res.status(201).json(ok(sale));
 });
 
@@ -58,6 +65,13 @@ export const getMySales = asyncHandler(async (req, res) => {
 });
 
 export const patchVoidSale = asyncHandler(async (req, res) => {
-  const updated = await voidSale(req.params.id as string, req.body?.reason);
+  const id = req.params.id as string;
+  const updated = await voidSale(id, req.body?.reason);
+  setAuditContext(req, {
+    action: 'sales.voided',
+    targetType: 'sale',
+    targetId: id,
+    meta: { reason: req.body?.reason ?? null },
+  });
   res.json(ok(updated));
 });

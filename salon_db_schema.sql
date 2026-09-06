@@ -643,16 +643,30 @@ CREATE INDEX idx_coupon_redemptions_customer_phone_normalized
   WHERE customer_phone IS NOT NULL;
 
 -- =====================================================================
--- 20. AUDIT_LOGS — track sensitive actions
+-- 20. AUDIT_LOGS — who did what, when. `actor_email`/`actor_role` are
+-- snapshotted at write time (from the JWT) rather than only joined live
+-- from `users`, so an entry stays meaningful even after that account is
+-- later deleted (actor_id is ON DELETE SET NULL). Populated by two
+-- tiers: a generic HTTP-layer capture for every mutating request
+-- (method/path/status_code/duration_ms always set), enriched with a
+-- human-readable action/target_type/target_id/meta for the handful of
+-- actions worth reading in plain English — see backend/src/api/audit/.
 -- =====================================================================
 CREATE TABLE audit_logs (
   id           BIGSERIAL PRIMARY KEY,
   actor_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+  actor_email  VARCHAR(180),
+  actor_role   VARCHAR(20),
   action       VARCHAR(80) NOT NULL,
   target_type  VARCHAR(40),
   target_id    UUID,
   meta         JSONB,
+  method       VARCHAR(10),
+  path         VARCHAR(300),
+  status_code  SMALLINT,
+  duration_ms  INTEGER,
   ip_address   VARCHAR(64),
+  user_agent   TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

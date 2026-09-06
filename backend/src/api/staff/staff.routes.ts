@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ok } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
+import { setAuditContext } from '@/utils/auditContext';
 import { authenticate, optionalAuth } from '@/middlewares/auth';
 import { requireRole } from '@/middlewares/role';
 import { validate } from '@/middlewares/validate';
@@ -202,7 +203,9 @@ router.delete(
   authenticate,
   requireRole('admin'),
   asyncHandler(async (req, res) => {
-    await deactivateStaff(req.params.id as string);
+    const id = req.params.id as string;
+    await deactivateStaff(id);
+    setAuditContext(req, { action: 'staff.deactivated', targetType: 'user', targetId: id });
     res.json(ok({ deactivated: true }));
   })
 );

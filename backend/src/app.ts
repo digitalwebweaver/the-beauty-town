@@ -11,6 +11,7 @@ import { logger } from '@/config/logger';
 import { pool } from '@/config/db';
 import { globalLimiter } from '@/middlewares/rateLimiter';
 import { errorHandler, notFound } from '@/middlewares/error';
+import { auditCapture } from '@/api/audit/audit.middleware';
 
 import authRoutes from '@/api/auth/auth.routes';
 import servicesRoutes from '@/api/services/services.routes';
@@ -33,6 +34,7 @@ import contactRoutes from '@/api/contact/contact.routes';
 import holidaysRoutes from '@/api/holidays/holidays.routes';
 import pushRoutes from '@/api/push/push.routes';
 import reportsRoutes from '@/api/reports/reports.routes';
+import auditRoutes from '@/api/audit/audit.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -64,6 +66,11 @@ export function createApp(): Express {
 
   // Global API rate limit
   app.use('/api', globalLimiter);
+
+  // Audit trail — logs every mutating request after it completes; mounted
+  // before any route so it sees the whole request lifecycle regardless of
+  // which router eventually handles it. See @/api/audit/audit.middleware.
+  app.use(auditCapture);
 
   // Health — actually checks the DB, not just "the process is alive". A
   // static 200 here would keep an orchestrator routing traffic to an
@@ -100,6 +107,7 @@ export function createApp(): Express {
   app.use('/api/holidays', holidaysRoutes);
   app.use('/api/push', pushRoutes);
   app.use('/api/reports', reportsRoutes);
+  app.use('/api/audit', auditRoutes);
   // app.use('/api/uploads', uploadsRoutes); // see TODO near the import above
 
   // 404 + error handler MUST be last

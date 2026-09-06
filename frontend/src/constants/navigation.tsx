@@ -10,6 +10,7 @@ import {
   Package,
   Receipt,
   ScissorsSquare,
+  ScrollText,
   Settings,
   Sparkles,
   Tag,
@@ -81,6 +82,7 @@ export const ADMIN_SECTIONS: NavEntry[] = [
   },
   { label: 'Coupons', href: ROUTES.adminCoupons, icon: Tag },
   { label: 'Reports', href: ROUTES.adminReports, icon: FileBarChart },
+  { label: 'Audit Trail', href: ROUTES.adminAuditTrail, icon: ScrollText },
   { label: 'Settings', href: ROUTES.adminSettings, icon: Settings },
   { label: 'Profile', href: ROUTES.adminProfile, icon: UserCog },
 ];

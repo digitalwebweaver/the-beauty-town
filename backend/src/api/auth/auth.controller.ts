@@ -3,6 +3,7 @@ import { env, isProd } from '@/config/env';
 import { ApiError } from '@/utils/ApiError';
 import { ok } from '@/utils/ApiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
+import { setAuditContext } from '@/utils/auditContext';
 import { findUserById } from './auth.repository';
 import {
   changeOwnPassword,
@@ -69,7 +70,9 @@ export const requestOtp = asyncHandler(async (req, res) => {
 
 export const verifyOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
+  setAuditContext(req, { action: 'auth.login', targetType: 'user', meta: { email, via: 'otp' } });
   const { user, accessToken, refreshToken } = await verifyLoginOtp(email, otp, meta(req));
+  setAuditContext(req, { action: 'auth.login', targetType: 'user', targetId: user.id });
   setAuthCookies(res, accessToken, refreshToken);
   res.json(ok({ user, accessToken }));
 });
@@ -82,12 +85,18 @@ export const requestPasswordResetHandler = asyncHandler(async (req, res) => {
 
 export const confirmPasswordResetHandler = asyncHandler(async (req, res) => {
   const { email, otp, newPassword } = req.body;
+  setAuditContext(req, { action: 'auth.password_reset', targetType: 'user', meta: { email } });
   await confirmPasswordReset(email, otp, newPassword);
   res.json(ok({ reset: true }));
 });
 
 export const changePasswordHandler = asyncHandler(async (req, res) => {
   if (!req.user) throw ApiError.unauthorized();
+  setAuditContext(req, {
+    action: 'auth.password_changed',
+    targetType: 'user',
+    targetId: req.user.sub,
+  });
   const { currentPassword, newPassword } = req.body;
   const { user, accessToken, refreshToken } = await changeOwnPassword(
     req.user.sub,
@@ -101,24 +110,43 @@ export const changePasswordHandler = asyncHandler(async (req, res) => {
 
 export const passwordLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  // Set before the service call: a wrong-password throw skips the rest of
+  // this handler, but the audit middleware's res.on('finish') still fires
+  // on the way out with a 401 — this way that failed attempt is captured
+  // with the attempted email, not silently dropped.
+  setAuditContext(req, {
+    action: 'auth.login',
+    targetType: 'user',
+    meta: { email, via: 'password' },
+  });
   const { user, accessToken, refreshToken } = await loginWithPassword(email, password, meta(req));
+  setAuditContext(req, { action: 'auth.login', targetType: 'user', targetId: user.id });
   setAuthCookies(res, accessToken, refreshToken);
   res.json(ok({ user, accessToken }));
 });
 
 export const register = asyncHandler(async (req, res) => {
   const { name, email, phone, password } = req.body;
+  setAuditContext(req, { action: 'auth.register', targetType: 'user', meta: { email } });
   const { user, accessToken, refreshToken } = await registerCustomer(
     { name, email, phone, password },
     meta(req)
   );
+  setAuditContext(req, { action: 'auth.register', targetType: 'user', targetId: user.id });
   setAuthCookies(res, accessToken, refreshToken);
   res.status(201).json(ok({ user, accessToken }));
 });
 
 export const googleLogin = asyncHandler(async (req, res) => {
   const { idToken } = req.body;
+  setAuditContext(req, { action: 'auth.login', targetType: 'user', meta: { via: 'google' } });
   const { user, accessToken, refreshToken } = await loginWithGoogle(idToken, meta(req));
+  setAuditContext(req, {
+    action: 'auth.login',
+    targetType: 'user',
+    targetId: user.id,
+    meta: { email: user.email },
+  });
   setAuthCookies(res, accessToken, refreshToken);
   res.json(ok({ user, accessToken }));
 });
@@ -133,6 +161,11 @@ export const refresh = asyncHandler(async (req, res) => {
 
 export const logoutHandler = asyncHandler(async (req, res) => {
   const token = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  setAuditContext(req, {
+    action: 'auth.logout',
+    targetType: 'user',
+    targetId: req.user?.sub ?? null,
+  });
   await logout(token);
   clearAuthCookies(res);
   res.json(ok({ message: 'Logged out' }));

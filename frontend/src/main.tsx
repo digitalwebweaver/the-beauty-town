@@ -21,6 +21,7 @@ import {
   AboutPage,
   AdminDashboardPage,
   AppointmentsManagementPage,
+  AuditTrailPage,
   BookAppointmentPage,
   BridalPackagesPage,
   ContactPage,
@@ -120,6 +121,7 @@ createRoot(document.getElementById('root')!).render(
                       <Route path={ROUTES.adminBilling} element={<QuickBillingPage />} />
                       <Route path={ROUTES.adminSales} element={<SalesHistoryPage />} />
                       <Route path={ROUTES.adminReports} element={<ReportsPage />} />
+                      <Route path={ROUTES.adminAuditTrail} element={<AuditTrailPage />} />
                       <Route path={ROUTES.adminSettings} element={<SettingsPage />} />
                       <Route path={ROUTES.adminBook} element={<BookAppointmentPage />} />
                       <Route path={ROUTES.adminCoupons} element={<CouponsPage />} />
