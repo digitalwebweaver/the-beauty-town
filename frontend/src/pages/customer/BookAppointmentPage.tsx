@@ -7,6 +7,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   Gift,
   PartyPopper,
@@ -25,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import PageHeader from '@/components/common/PageHeader';
 import SectionError from '@/components/common/SectionError';
 import { cn } from '@/lib/utils';
@@ -78,6 +80,10 @@ function BookAppointmentPage() {
   const isStaffBooking = isAuthenticated && role !== 'customer';
 
   const [step, setStep] = useState(1);
+  // Mobile: "Your booking" (services picked so far, stylist, date/time,
+  // total) lives in a tap-to-open sheet — see the fixed bar near the
+  // bottom of the JSX below.
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const [categoryKey, setCategoryKey] = useState<string>('all');
   const [serviceSearch, setServiceSearch] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
@@ -332,10 +338,85 @@ function BookAppointmentPage() {
     );
   }
 
+  // "Your booking" — the running summary of what's been picked so far.
+  // Shared between the always-visible desktop sidebar and a mobile sheet,
+  // rather than existing only in the sidebar (which is `hidden` below lg)
+  // and leaving mobile with no way to review a selection before moving on.
+  const bookingSummaryPanel = (
+    <>
+      {selectedServices.length === 0 ? (
+        <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+          No services selected yet.
+        </p>
+      ) : (
+        <div className="max-h-[32vh] space-y-2 overflow-y-auto pr-1">
+          {selectedServices.map((s) => (
+            <div key={s.id} className="flex items-start justify-between gap-2 text-sm">
+              <span className="flex-1">{s.name}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="whitespace-nowrap font-medium tabular-nums">
+                  {packageId ? 'In package' : formatInr(s.price_inr)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toggleService(s.id)}
+                  title="Remove"
+                  aria-label={`Remove ${s.name}`}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedServices.length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>Duration</span>
+              <span className="font-medium text-foreground">{totalDuration} min</span>
+            </div>
+            {staffId && (
+              <div className="flex items-center gap-1.5">
+                <ScissorsSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {staffId === 'any'
+                    ? 'Any available stylist'
+                    : staff.data?.find((st) => st.user_id === staffId)?.name}
+                </span>
+              </div>
+            )}
+            {date && time && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {date} at {time}
+                </span>
+              </div>
+            )}
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between text-base font-bold">
+            <span>Total</span>
+            <span className="text-primary">{formatInr(totalPrice)}</span>
+          </div>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div
       className={cn(
-        'pb-24 lg:pb-0',
+        'lg:pb-0',
+        // Bottom padding clears the fixed mobile bar below — staff/admin
+        // needs more of it since that bar floats above DashboardLayout's
+        // own bottom tab bar rather than sitting flush with the edge.
+        isStaffBooking ? 'pb-40' : 'pb-24',
         // The admin/staff booking flow lives inside DashboardLayout, which
         // already has a sidebar bounding the width — capping it again here
         // (like the public guest page needs, since it has no such bound)
@@ -828,68 +909,7 @@ function BookAppointmentPage() {
           <CardContent className="space-y-4 p-5">
             <h2 className="font-semibold">Your booking</h2>
 
-            {selectedServices.length === 0 ? (
-              <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-                No services selected yet.
-              </p>
-            ) : (
-              <div className="max-h-[32vh] space-y-2 overflow-y-auto pr-1">
-                {selectedServices.map((s) => (
-                  <div key={s.id} className="flex items-start justify-between gap-2 text-sm">
-                    <span className="flex-1">{s.name}</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="whitespace-nowrap font-medium tabular-nums">
-                        {packageId ? 'In package' : formatInr(s.price_inr)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleService(s.id)}
-                        title="Remove"
-                        aria-label={`Remove ${s.name}`}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {selectedServices.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center justify-between">
-                    <span>Duration</span>
-                    <span className="font-medium text-foreground">{totalDuration} min</span>
-                  </div>
-                  {staffId && (
-                    <div className="flex items-center gap-1.5">
-                      <ScissorsSquare className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate">
-                        {staffId === 'any'
-                          ? 'Any available stylist'
-                          : staff.data?.find((st) => st.user_id === staffId)?.name}
-                      </span>
-                    </div>
-                  )}
-                  {date && time && (
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate">
-                        {date} at {time}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-base font-bold">
-                  <span>Total</span>
-                  <span className="text-primary">{formatInr(totalPrice)}</span>
-                </div>
-              </>
-            )}
+            {bookingSummaryPanel}
 
             <div className="flex gap-2 pt-1">
               <Button
@@ -923,19 +943,44 @@ function BookAppointmentPage() {
         </Card>
       </div>
 
-      {/* Mobile: the same summary total + action buttons, pinned to the
-          bottom of the viewport instead of the page — the step content
+      {/* Mobile: the same summary total + action buttons, pinned above the
+          viewport's bottom edge instead of the page — the step content
           above can be as long as it needs to be (search results, staff
-          lists, etc.) without ever burying the Next/Confirm button. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden">
+          lists, etc.) without ever burying Next/Confirm. Tapping the
+          summary (not the buttons) opens the full "Your booking" detail
+          as a sheet, since this bar only has room for a one-line total.
+          Staff/admin bookings render inside DashboardLayout, which has its
+          own fixed bottom tab bar at the same screen edge — sitting at a
+          plain `bottom-0` here would be invisible underneath it, the exact
+          bug Quick Bill's mobile cart had. The public guest page has no
+          such bar, so it stays flush with the edge there. */}
+      <div
+        className="fixed inset-x-0 z-40 border-t bg-background/95 p-3 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden"
+        style={
+          isStaffBooking
+            ? { bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }
+            : { bottom: 0, paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }
+        }
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-xs text-muted-foreground">
-              {selectedServices.length} service{selectedServices.length === 1 ? '' : 's'}
-              {date && time ? ` · ${date} ${time}` : ''}
-            </p>
-            <p className="font-semibold text-primary">{formatInr(totalPrice)}</p>
-          </div>
+          <button
+            type="button"
+            onClick={() => setMobileSummaryOpen(true)}
+            disabled={selectedServices.length === 0}
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left disabled:opacity-70"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-xs text-muted-foreground">
+                {selectedServices.length} service{selectedServices.length === 1 ? '' : 's'}
+                {date && time ? ` · ${date} ${time}` : ''}
+                {selectedServices.length > 0 ? ' · Tap to view' : ''}
+              </p>
+              <p className="font-semibold text-primary">{formatInr(totalPrice)}</p>
+            </div>
+            {selectedServices.length > 0 && (
+              <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+          </button>
           <div className="flex flex-shrink-0 gap-2">
             <Button
               variant="outline"
@@ -961,6 +1006,18 @@ function BookAppointmentPage() {
           </div>
         </div>
       </div>
+
+      <Sheet open={mobileSummaryOpen} onOpenChange={setMobileSummaryOpen}>
+        <SheetContent
+          side="bottom"
+          className="max-h-[85vh] overflow-y-auto rounded-t-2xl lg:hidden"
+        >
+          <SheetHeader className="pb-0 text-left">
+            <SheetTitle>Your booking</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 px-4 pb-6">{bookingSummaryPanel}</div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
