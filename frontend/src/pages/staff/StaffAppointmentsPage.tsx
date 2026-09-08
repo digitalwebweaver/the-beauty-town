@@ -56,7 +56,7 @@ function AppointmentRow({
             {a.staff_name ? ` · ${a.staff_name}` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Select
             value={a.status}
             onValueChange={(v) => onUpdateStatus(a.id, v as AppointmentStatus)}

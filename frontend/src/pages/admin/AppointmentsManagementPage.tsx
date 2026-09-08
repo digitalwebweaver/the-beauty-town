@@ -70,7 +70,7 @@ function AppointmentRow({
           {a.service_names.join(' + ')} · {formatTime(a.start_time)}
           {a.staff_name ? ` · ${a.staff_name}` : ''}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={a.status}
             onValueChange={(v) => onUpdateStatus(a.id, v as AppointmentStatus)}
