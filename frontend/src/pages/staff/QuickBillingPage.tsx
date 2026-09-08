@@ -1071,7 +1071,13 @@ function QuickBillingPage() {
             a cart too long to fit on screen. */}
         <SheetContent
           side="bottom"
-          className="flex h-[85vh] max-h-[85vh] flex-col gap-0 rounded-t-2xl p-0 lg:hidden"
+          // Inline height, not a `h-[85vh]` class: the base component's own
+          // `data-[side=bottom]:h-auto` rule carries higher CSS specificity
+          // (an attribute selector + a class beats a plain class) and would
+          // otherwise silently win over a same-specificity utility class,
+          // leaving the sheet content-sized instead of properly bounded.
+          style={{ height: '85vh', maxHeight: '85vh' }}
+          className="flex w-full max-w-full flex-col gap-0 overflow-x-hidden rounded-t-2xl p-0 lg:hidden"
         >
           <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-muted" />
           <SheetHeader className="shrink-0 px-4 pt-2 pb-3 text-left">
