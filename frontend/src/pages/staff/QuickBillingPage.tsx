@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Check,
+  ChevronUp,
   Copy,
   FileText,
   Gift,
@@ -36,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
@@ -119,6 +121,11 @@ function QuickBillingPage() {
     null
   );
   const validateCoupon = useValidateCoupon();
+
+  // Mobile: the ticket lives in a tap-to-open bottom sheet instead of being
+  // stacked at the end of the page — see the fixed bar + Sheet near the
+  // bottom of the JSX below.
+  const [mobileTicketOpen, setMobileTicketOpen] = useState(false);
 
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [payments, setPayments] = useState<{ method: PaymentMethod; amountInr: number }[]>([
@@ -226,28 +233,41 @@ function QuickBillingPage() {
     unitPrice: number,
     maxStock?: number
   ) {
+    // Validated up front (against the current `cart`) purely so we know
+    // whether to show a success or an error toast — the actual state
+    // update below still goes through the functional form for safety.
+    const key = `${type}:${refId}`;
+    const existing = cart.find((l) => l.key === key);
+    if (existing) {
+      if (existing.maxStock !== undefined && existing.quantity + 1 > existing.maxStock) {
+        toast.error(`Only ${existing.maxStock} left in stock`);
+        return;
+      }
+    } else if (maxStock !== undefined && maxStock < 1) {
+      toast.error('Out of stock');
+      return;
+    }
+
     setCart((prev) => {
-      const key = `${type}:${refId}`;
       const idx = prev.findIndex((l) => l.key === key);
       if (idx >= 0) {
         const line = prev[idx];
-        const nextQty = line.quantity + 1;
-        if (line.maxStock !== undefined && nextQty > line.maxStock) {
-          toast.error(`Only ${line.maxStock} left in stock`);
-          return prev;
-        }
         const next = [...prev];
-        next[idx] = { ...line, quantity: nextQty };
+        next[idx] = { ...line, quantity: line.quantity + 1 };
         return next;
-      }
-      if (maxStock !== undefined && maxStock < 1) {
-        toast.error('Out of stock');
-        return prev;
       }
       return [
         ...prev,
         { key, type, refId, name, unitPrice, quantity: 1, discountInr: 0, maxStock },
       ];
+    });
+
+    // Instant confirmation on mobile, where the ticket itself is a tap
+    // away in the bottom sheet rather than always in view — replaces
+    // itself (same id) instead of stacking on a quick run of taps.
+    toast.success(`${name} added — ${formatInr(unitPrice)}`, {
+      id: 'qb-cart-toast',
+      duration: 1200,
     });
   }
 
@@ -385,6 +405,7 @@ function QuickBillingPage() {
   function openPayment() {
     if (!cart.length) return toast.error('Add at least one item first');
     setPayments([{ method: 'cash', amountInr: total }]);
+    setMobileTicketOpen(false);
     setPayDialogOpen(true);
   }
 
@@ -472,6 +493,233 @@ function QuickBillingPage() {
     // the browser snapshots the page for printing.
     setTimeout(() => window.print(), 50);
   }
+
+  // The ticket's contents — built once so the exact same markup can sit in
+  // the always-visible sidebar on desktop AND inside the mobile bottom
+  // sheet, instead of only ever existing at the bottom of one long
+  // single-column page (the whole reason it used to take a full scroll to
+  // see what had been added).
+  const ticketPanel = (
+    <>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <Receipt className="h-4 w-4" /> Ticket
+        </h2>
+        {cart.length > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setCart([])}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {cart.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+          <ShoppingBag className="h-6 w-6" />
+          Tap a service or product to add it here.
+        </div>
+      ) : (
+        <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+          {cart.map((l) => (
+            <div key={l.key} className="rounded-lg border p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-medium">{l.name}</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removeLine(l.key)}
+                  title="Remove"
+                  aria-label={`Remove ${l.name}`}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    title="Decrease quantity"
+                    aria-label={`Decrease quantity of ${l.name}`}
+                    onClick={() => setQty(l.key, l.quantity - 1)}
+                    disabled={l.quantity <= 1}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-6 text-center text-sm tabular-nums">{l.quantity}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    title="Increase quantity"
+                    aria-label={`Increase quantity of ${l.name}`}
+                    onClick={() => setQty(l.key, l.quantity + 1)}
+                    disabled={l.maxStock !== undefined && l.quantity >= l.maxStock}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+                <span className="text-sm font-semibold tabular-nums">
+                  {formatInr(round2(l.unitPrice * l.quantity - l.discountInr))}
+                </span>
+              </div>
+              {settings.allow_price_override ? (
+                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Price</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                      ₹
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      aria-label={`Unit price for ${l.name}`}
+                      value={l.unitPrice}
+                      onChange={(e) => setUnitPrice(l.key, Number(e.target.value))}
+                      className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <span>per unit</span>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {formatInr(l.unitPrice)} per unit
+                </p>
+              )}
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Discount</span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                    ₹
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    aria-label={`Discount for ${l.name}`}
+                    value={l.discountInr}
+                    onChange={(e) => setLineDiscount(l.key, Number(e.target.value))}
+                    className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {cart.length > 0 && (
+        <>
+          <Separator />
+
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span>
+              <span className="tabular-nums">{formatInr(subtotal)}</span>
+            </div>
+
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1.5">
+                <span className="flex items-center gap-1.5 font-medium text-primary">
+                  <Tag className="h-3.5 w-3.5" /> {appliedCoupon.code}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="tabular-nums text-primary">
+                    −{formatInr(appliedCoupon.discountInr)}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={removeCoupon}
+                    title="Remove coupon"
+                    aria-label={`Remove coupon ${appliedCoupon.code}`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  placeholder="Coupon code"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                  className="h-7 flex-1 uppercase"
+                />
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  onClick={applyCoupon}
+                  disabled={validateCoupon.isPending || !couponInput.trim()}
+                >
+                  {validateCoupon.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    'Apply'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Bill discount</span>
+              <div className="flex items-center gap-1.5">
+                <div className="inline-flex overflow-hidden rounded-md border">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={discountMode === 'flat' ? 'default' : 'ghost'}
+                    className="rounded-none"
+                    onClick={() => setDiscountMode('flat')}
+                  >
+                    ₹
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={discountMode === 'percent' ? 'default' : 'ghost'}
+                    className="rounded-none"
+                    onClick={() => setDiscountMode('percent')}
+                  >
+                    %
+                  </Button>
+                </div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(Number(e.target.value))}
+                  className="h-7 w-16 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </div>
+            </div>
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Total discount</span>
+                <span className="tabular-nums">−{formatInr(totalDiscount)}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border-2 border-primary bg-primary/5 p-4">
+            <div className="flex items-center justify-between text-lg font-bold">
+              <span>Total</span>
+              <span className="tabular-nums text-primary">{formatInr(total)}</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      <Button className="w-full" size="lg" onClick={openPayment} disabled={cart.length === 0}>
+        Charge {formatInr(total)}
+      </Button>
+    </>
+  );
 
   return (
     <div className="space-y-6 pb-24 lg:pb-0">
@@ -782,246 +1030,48 @@ function QuickBillingPage() {
           </Card>
         </div>
 
-        {/* Ticket / cart */}
-        <Card className="lg:sticky lg:top-6">
-          <CardContent className="space-y-4 p-4 md:p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-semibold">
-                <Receipt className="h-4 w-4" /> Ticket
-              </h2>
-              {cart.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setCart([])}>
-                  Clear
-                </Button>
-              )}
-            </div>
-
-            {cart.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-                <ShoppingBag className="h-6 w-6" />
-                Tap a service or product to add it here.
-              </div>
-            ) : (
-              <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
-                {cart.map((l) => (
-                  <div key={l.key} className="rounded-lg border p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium">{l.name}</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => removeLine(l.key)}
-                        title="Remove"
-                        aria-label={`Remove ${l.name}`}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          title="Decrease quantity"
-                          aria-label={`Decrease quantity of ${l.name}`}
-                          onClick={() => setQty(l.key, l.quantity - 1)}
-                          disabled={l.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-6 text-center text-sm tabular-nums">{l.quantity}</span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          title="Increase quantity"
-                          aria-label={`Increase quantity of ${l.name}`}
-                          onClick={() => setQty(l.key, l.quantity + 1)}
-                          disabled={l.maxStock !== undefined && l.quantity >= l.maxStock}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <span className="text-sm font-semibold tabular-nums">
-                        {formatInr(round2(l.unitPrice * l.quantity - l.discountInr))}
-                      </span>
-                    </div>
-                    {settings.allow_price_override ? (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Price</span>
-                        <div className="relative">
-                          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
-                            ₹
-                          </span>
-                          <Input
-                            type="number"
-                            min={0}
-                            aria-label={`Unit price for ${l.name}`}
-                            value={l.unitPrice}
-                            onChange={(e) => setUnitPrice(l.key, Number(e.target.value))}
-                            className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          />
-                        </div>
-                        <span>per unit</span>
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {formatInr(l.unitPrice)} per unit
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Discount</span>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
-                          ₹
-                        </span>
-                        <Input
-                          type="number"
-                          min={0}
-                          aria-label={`Discount for ${l.name}`}
-                          value={l.discountInr}
-                          onChange={(e) => setLineDiscount(l.key, Number(e.target.value))}
-                          className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {cart.length > 0 && (
-              <>
-                <Separator />
-
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span className="tabular-nums">{formatInr(subtotal)}</span>
-                  </div>
-
-                  {appliedCoupon ? (
-                    <div className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1.5">
-                      <span className="flex items-center gap-1.5 font-medium text-primary">
-                        <Tag className="h-3.5 w-3.5" /> {appliedCoupon.code}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="tabular-nums text-primary">
-                          −{formatInr(appliedCoupon.discountInr)}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={removeCoupon}
-                          title="Remove coupon"
-                          aria-label={`Remove coupon ${appliedCoupon.code}`}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        placeholder="Coupon code"
-                        value={couponInput}
-                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                        onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
-                        className="h-7 flex-1 uppercase"
-                      />
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="outline"
-                        onClick={applyCoupon}
-                        disabled={validateCoupon.isPending || !couponInput.trim()}
-                      >
-                        {validateCoupon.isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          'Apply'
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Bill discount</span>
-                    <div className="flex items-center gap-1.5">
-                      <div className="inline-flex overflow-hidden rounded-md border">
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant={discountMode === 'flat' ? 'default' : 'ghost'}
-                          className="rounded-none"
-                          onClick={() => setDiscountMode('flat')}
-                        >
-                          ₹
-                        </Button>
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant={discountMode === 'percent' ? 'default' : 'ghost'}
-                          className="rounded-none"
-                          onClick={() => setDiscountMode('percent')}
-                        >
-                          %
-                        </Button>
-                      </div>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={discountValue}
-                        onChange={(e) => setDiscountValue(Number(e.target.value))}
-                        className="h-7 w-16 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      />
-                    </div>
-                  </div>
-                  {totalDiscount > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Total discount</span>
-                      <span className="tabular-nums">−{formatInr(totalDiscount)}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-lg border-2 border-primary bg-primary/5 p-4">
-                  <div className="flex items-center justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span className="tabular-nums text-primary">{formatInr(total)}</span>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <Button className="w-full" size="lg" onClick={openPayment} disabled={cart.length === 0}>
-              Charge {formatInr(total)}
-            </Button>
-          </CardContent>
+        {/* Ticket / cart — desktop only; on mobile the same content lives
+            in the tap-to-open sheet below, reachable from anywhere on the
+            page instead of only after scrolling past everything else. */}
+        <Card className="hidden lg:sticky lg:top-6 lg:block">
+          <CardContent className="space-y-4 p-4 md:p-5">{ticketPanel}</CardContent>
         </Card>
       </div>
 
-      {/* Mobile/tablet: the ticket card above can be a long scroll away
-          once services/products are being picked — this keeps the total
-          and Charge button reachable at all times without scrolling. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden">
-        <div className="mx-auto flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-xs text-muted-foreground">
-              {cart.length} item{cart.length === 1 ? '' : 's'}
-            </p>
-            <p className="font-semibold text-primary">{formatInr(total)}</p>
+      {/* Mobile: a persistent bar keeps the running total and Charge button
+          reachable at all times; tapping the summary (rather than Charge)
+          opens the full ticket in a bottom sheet, so seeing what's been
+          added never requires scrolling to the end of the page. */}
+      <Sheet open={mobileTicketOpen} onOpenChange={setMobileTicketOpen}>
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden">
+          <div className="mx-auto flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileTicketOpen(true)}
+              disabled={cart.length === 0}
+              className="flex min-w-0 flex-1 items-center gap-1.5 text-left disabled:opacity-60"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-xs text-muted-foreground">
+                  {cart.length} item{cart.length === 1 ? '' : 's'}
+                  {cart.length > 0 ? ' · Tap to view' : ''}
+                </p>
+                <p className="font-semibold text-primary">{formatInr(total)}</p>
+              </div>
+              {cart.length > 0 && <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            </button>
+            <Button onClick={openPayment} disabled={cart.length === 0}>
+              Charge {formatInr(total)}
+            </Button>
           </div>
-          <Button onClick={openPayment} disabled={cart.length === 0}>
-            Charge {formatInr(total)}
-          </Button>
         </div>
-      </div>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto lg:hidden">
+          <SheetHeader className="pb-0">
+            <SheetTitle>Ticket</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 px-4 pb-6">{ticketPanel}</div>
+        </SheetContent>
+      </Sheet>
 
       {/* Payment dialog */}
       <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
