@@ -1038,33 +1038,32 @@ function QuickBillingPage() {
         </Card>
       </div>
 
-      {/* Mobile: a persistent bar keeps the running total and Charge button
-          reachable at all times; tapping the summary (rather than Charge)
+      {/* Mobile: a floating cart pill — not a full-width bar, which would
+          sit in the exact same spot as (and get hidden behind) the app's
+          own fixed bottom tab bar. Floats clear of it instead; tapping it
           opens the full ticket in a bottom sheet, so seeing what's been
-          added never requires scrolling to the end of the page. */}
+          added never requires scrolling to the end of the page. Hidden
+          entirely once the sheet itself is open, and while the cart is
+          empty. */}
+      {cart.length > 0 && !mobileTicketOpen && (
+        <button
+          type="button"
+          onClick={() => setMobileTicketOpen(true)}
+          className="fixed right-4 z-40 flex items-center gap-2.5 rounded-full bg-primary py-3 pr-3 pl-4 text-primary-foreground shadow-lg shadow-primary/30 lg:hidden"
+          style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
+        >
+          <span className="relative flex h-5 w-5 items-center justify-center">
+            <ShoppingBag className="h-5 w-5" />
+            <span className="absolute -top-2.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold text-primary">
+              {cart.length}
+            </span>
+          </span>
+          <span className="text-sm font-semibold tabular-nums">{formatInr(total)}</span>
+          <ChevronUp className="h-4 w-4 opacity-80" />
+        </button>
+      )}
+
       <Sheet open={mobileTicketOpen} onOpenChange={setMobileTicketOpen}>
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur supports-backdrop-filter:bg-background/80 lg:hidden">
-          <div className="mx-auto flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileTicketOpen(true)}
-              disabled={cart.length === 0}
-              className="flex min-w-0 flex-1 items-center gap-1.5 text-left disabled:opacity-60"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-xs text-muted-foreground">
-                  {cart.length} item{cart.length === 1 ? '' : 's'}
-                  {cart.length > 0 ? ' · Tap to view' : ''}
-                </p>
-                <p className="font-semibold text-primary">{formatInr(total)}</p>
-              </div>
-              {cart.length > 0 && <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />}
-            </button>
-            <Button onClick={openPayment} disabled={cart.length === 0}>
-              Charge {formatInr(total)}
-            </Button>
-          </div>
-        </div>
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto lg:hidden">
           <SheetHeader className="pb-0">
             <SheetTitle>Ticket</SheetTitle>
