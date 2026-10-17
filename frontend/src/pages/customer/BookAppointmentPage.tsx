@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { apiError } from '@/lib/apiError';
@@ -150,6 +150,9 @@ function BookAppointmentPage() {
   } | null>(null);
 
   const dates = useMemo(() => generateDates(14), []);
+  const dateScrollRef = useRef<HTMLDivElement>(null);
+  const scrollDates = (dir: 1 | -1) =>
+    dateScrollRef.current?.scrollBy({ left: dir * 240, behavior: 'smooth' });
   const categories = useCategories();
   const services = useServices();
   const staff = useStaff();
@@ -658,43 +661,84 @@ function BookAppointmentPage() {
                   Slots that would overlap an existing booking are disabled.
                 </p>
 
-                <div className="mt-4">
-                  <Label className="text-xs uppercase text-muted-foreground">Date</Label>
-                  <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
-                    {dates.map((d) => {
-                      const active = date === d.iso;
-                      const holidayReason = holidayByDate.get(d.iso);
-                      return (
-                        <button
-                          key={d.iso}
-                          type="button"
-                          aria-pressed={active}
-                          disabled={!!holidayReason}
-                          title={holidayReason}
-                          onClick={() => {
-                            setDate(d.iso);
-                            setTime(null);
-                          }}
-                          className={cn(
-                            'flex min-w-[68px] flex-col items-center rounded-lg border p-3 text-sm',
-                            holidayReason
-                              ? 'cursor-not-allowed opacity-40'
-                              : active
-                                ? 'border-primary bg-primary/5'
-                                : 'hover:bg-accent'
-                          )}
-                        >
-                          <span className="text-xs text-muted-foreground">{d.weekday}</span>
-                          <span className="text-lg font-bold">{d.day}</span>
-                          <span className="text-xs text-muted-foreground">{d.date}</span>
-                        </button>
-                      );
-                    })}
+                <div className="mt-5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Date
+                  </Label>
+                  <div className="mt-2 flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="hidden shrink-0 sm:flex"
+                      onClick={() => scrollDates(-1)}
+                      aria-label="Earlier dates"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div
+                      ref={dateScrollRef}
+                      className="flex flex-1 gap-2 overflow-x-auto scroll-smooth scrollbar-none"
+                    >
+                      {dates.map((d) => {
+                        const active = date === d.iso;
+                        const holidayReason = holidayByDate.get(d.iso);
+                        return (
+                          <button
+                            key={d.iso}
+                            type="button"
+                            aria-pressed={active}
+                            disabled={!!holidayReason}
+                            title={holidayReason}
+                            onClick={() => {
+                              setDate(d.iso);
+                              setTime(null);
+                            }}
+                            className={cn(
+                              'flex min-w-16 shrink-0 flex-col items-center rounded-lg border py-2.5 text-sm transition-colors',
+                              holidayReason
+                                ? 'cursor-not-allowed opacity-40'
+                                : active
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : 'hover:border-primary/40 hover:bg-accent'
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'text-[11px]',
+                                active ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                              )}
+                            >
+                              {d.weekday}
+                            </span>
+                            <span className="text-lg font-bold">{d.day}</span>
+                            <span
+                              className={cn(
+                                'text-[11px]',
+                                active ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                              )}
+                            >
+                              {d.date}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="hidden shrink-0 sm:flex"
+                      onClick={() => scrollDates(1)}
+                      aria-label="Later dates"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
                 <div className="mt-6">
-                  <Label className="text-xs uppercase text-muted-foreground">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Time {availability.isFetching ? '(checking…)' : ''}
                   </Label>
                   <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -709,11 +753,11 @@ function BookAppointmentPage() {
                           disabled={busy}
                           onClick={() => setTime(t)}
                           className={cn(
-                            'rounded-md border px-3 py-2 text-sm',
+                            'rounded-md border py-2 text-sm font-medium transition-colors',
                             busy &&
-                              'cursor-not-allowed bg-muted text-muted-foreground line-through opacity-60',
+                              'cursor-not-allowed border-transparent bg-muted/60 text-muted-foreground/50',
                             !busy && active && 'border-primary bg-primary text-primary-foreground',
-                            !busy && !active && 'hover:bg-accent'
+                            !busy && !active && 'hover:border-primary/40 hover:bg-accent'
                           )}
                         >
                           {t}
