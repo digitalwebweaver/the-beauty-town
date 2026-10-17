@@ -78,10 +78,10 @@ function BookAppointmentPage() {
   // they're booking on behalf of a customer, not for themselves — so the
   // copy differs from a true anonymous guest.
   const isStaffBooking = isAuthenticated && role !== 'customer';
-  // Staff booking for a walk-in/phone customer don't need prices in the way
-  // — the actual charge happens at Quick Bill checkout. Self-service
-  // customer booking still shows them; that's how they decide what to book.
-  const showPrices = !isStaffBooking;
+  // Prices are intentionally hidden through the whole booking flow — guest,
+  // customer or staff — the charge is settled at Quick Bill checkout.
+  // Anyone who wants to see pricing first can browse it on the Services page.
+  const showPrices = false;
 
   const [step, setStep] = useState(1);
   // Mobile: "Your booking" (services picked so far, stylist, date/time,
