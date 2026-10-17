@@ -110,6 +110,7 @@ export const PUBLIC_NAV: NavItem[] = [
   { label: 'Home', href: ROUTES.home, icon: Home },
   { label: 'Services', href: ROUTES.services, icon: Sparkles },
   { label: 'Our Packages', href: ROUTES.packages, icon: Gift },
+  { label: 'Appointment', href: ROUTES.guestBook, icon: CalendarCheck },
   { label: 'About', href: ROUTES.about, icon: UserCircle },
   { label: 'Gallery', href: ROUTES.gallery, icon: Package },
   { label: 'Contact', href: ROUTES.contact, icon: Settings },
