@@ -552,37 +552,44 @@ function QuickBillingPage() {
           {formatInr(round2(l.unitPrice * l.quantity - l.discountInr))}
         </span>
       </div>
-      {settings.allow_price_override ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>Price</span>
-          <div className="relative">
+      <div className="mt-2.5 space-y-1.5 border-t pt-2.5 text-xs text-muted-foreground">
+        {settings.allow_price_override ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-16 shrink-0">Price</span>
+            <div className="relative shrink-0">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                ₹
+              </span>
+              <Input
+                type="number"
+                min={0}
+                aria-label={`Unit price for ${l.name}`}
+                value={l.unitPrice}
+                onChange={(e) => setUnitPrice(l.key, Number(e.target.value))}
+                className="h-7 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            </div>
+            <span>per unit</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="w-16 shrink-0">Price</span>
+            <span className="text-foreground">{formatInr(l.unitPrice)} per unit</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-16 shrink-0">Discount</span>
+          <div className="relative shrink-0">
             <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">₹</span>
             <Input
               type="number"
               min={0}
-              aria-label={`Unit price for ${l.name}`}
-              value={l.unitPrice}
-              onChange={(e) => setUnitPrice(l.key, Number(e.target.value))}
-              className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              aria-label={`Discount for ${l.name}`}
+              value={l.discountInr}
+              onChange={(e) => setLineDiscount(l.key, Number(e.target.value))}
+              className="h-7 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           </div>
-          <span>per unit</span>
-        </div>
-      ) : (
-        <p className="mt-2 text-xs text-muted-foreground">{formatInr(l.unitPrice)} per unit</p>
-      )}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span>Discount</span>
-        <div className="relative">
-          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">₹</span>
-          <Input
-            type="number"
-            min={0}
-            aria-label={`Discount for ${l.name}`}
-            value={l.discountInr}
-            onChange={(e) => setLineDiscount(l.key, Number(e.target.value))}
-            className="h-6 w-20 pl-5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          />
         </div>
       </div>
     </div>
