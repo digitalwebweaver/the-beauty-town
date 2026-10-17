@@ -78,6 +78,10 @@ function BookAppointmentPage() {
   // they're booking on behalf of a customer, not for themselves — so the
   // copy differs from a true anonymous guest.
   const isStaffBooking = isAuthenticated && role !== 'customer';
+  // Staff booking for a walk-in/phone customer don't need prices in the way
+  // — the actual charge happens at Quick Bill checkout. Self-service
+  // customer booking still shows them; that's how they decide what to book.
+  const showPrices = !isStaffBooking;
 
   const [step, setStep] = useState(1);
   // Mobile: "Your booking" (services picked so far, stylist, date/time,
@@ -290,10 +294,12 @@ function BookAppointmentPage() {
                   {guestConfirmed.date} at {guestConfirmed.time}
                 </span>
               </div>
-              <div className="flex justify-between border-t pt-2 font-semibold">
-                <span>Total</span>
-                <span className="text-primary">{formatInr(guestConfirmed.total)}</span>
-              </div>
+              {showPrices && (
+                <div className="flex justify-between border-t pt-2 font-semibold">
+                  <span>Total</span>
+                  <span className="text-primary">{formatInr(guestConfirmed.total)}</span>
+                </div>
+              )}
             </div>
             {isStaffBooking ? (
               <div className="flex gap-2">
@@ -357,9 +363,11 @@ function BookAppointmentPage() {
             <div key={s.id} className="flex items-start justify-between gap-2 text-sm">
               <span className="flex-1">{s.name}</span>
               <div className="flex items-center gap-1.5">
-                <span className="whitespace-nowrap font-medium tabular-nums">
-                  {packageId ? 'In package' : formatInr(s.price_inr)}
-                </span>
+                {showPrices && (
+                  <span className="whitespace-nowrap font-medium tabular-nums">
+                    {packageId ? 'In package' : formatInr(s.price_inr)}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => toggleService(s.id)}
@@ -402,11 +410,15 @@ function BookAppointmentPage() {
               </div>
             )}
           </div>
-          <Separator />
-          <div className="flex items-center justify-between text-base font-bold">
-            <span>Total</span>
-            <span className="text-primary">{formatInr(totalPrice)}</span>
-          </div>
+          {showPrices && (
+            <>
+              <Separator />
+              <div className="flex items-center justify-between text-base font-bold">
+                <span>Total</span>
+                <span className="text-primary">{formatInr(totalPrice)}</span>
+              </div>
+            </>
+          )}
         </>
       )}
     </>
@@ -447,8 +459,8 @@ function BookAppointmentPage() {
         <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-primary bg-primary/5 p-3 text-sm">
           <span className="flex items-center gap-2">
             <Gift className="h-4 w-4 flex-shrink-0 text-primary" />
-            Booking package: <strong>{packageQuery.data.name}</strong> — ₹
-            {Number(packageQuery.data.price_inr).toLocaleString('en-IN')}
+            Booking package: <strong>{packageQuery.data.name}</strong>
+            {showPrices && ` — ₹${Number(packageQuery.data.price_inr).toLocaleString('en-IN')}`}
           </span>
           <Button variant="ghost" size="sm" onClick={removePackage}>
             <X className="mr-1 h-3.5 w-3.5" /> Remove
@@ -572,9 +584,11 @@ function BookAppointmentPage() {
                         <div className="flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <p className="font-medium">{s.name}</p>
-                            <p className="whitespace-nowrap font-semibold text-primary">
-                              ₹{Number(s.price_inr).toLocaleString('en-IN')}
-                            </p>
+                            {showPrices && (
+                              <p className="whitespace-nowrap font-semibold text-primary">
+                                ₹{Number(s.price_inr).toLocaleString('en-IN')}
+                              </p>
+                            )}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground line-clamp-1">
                             {s.description}
@@ -882,13 +896,15 @@ function BookAppointmentPage() {
                       {selectedServices.map((s) => (
                         <li key={s.id} className="flex items-center justify-between text-sm">
                           <span>{s.name}</span>
-                          <span className="font-medium">
-                            {packageId ? (
-                              <span className="text-xs text-muted-foreground">In package</span>
-                            ) : (
-                              `₹${Number(s.price_inr).toLocaleString('en-IN')}`
-                            )}
-                          </span>
+                          {showPrices && (
+                            <span className="font-medium">
+                              {packageId ? (
+                                <span className="text-xs text-muted-foreground">In package</span>
+                              ) : (
+                                `₹${Number(s.price_inr).toLocaleString('en-IN')}`
+                              )}
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -896,7 +912,7 @@ function BookAppointmentPage() {
                       <span className="text-muted-foreground">Total duration</span>
                       <span className="font-medium">{totalDuration} min</span>
                     </div>
-                    {packageId && packageQuery.data && (
+                    {showPrices && packageId && packageQuery.data && (
                       <p className="mt-2 text-xs text-muted-foreground">
                         Priced as part of the {packageQuery.data.name} package — see total below.
                       </p>
@@ -932,15 +948,21 @@ function BookAppointmentPage() {
                     </div>
                   )}
 
-                  <div className="rounded-lg border-2 border-primary bg-primary/5 p-4">
-                    <div className="flex items-center justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span className="text-primary">₹{totalPrice.toLocaleString('en-IN')}</span>
+                  {showPrices ? (
+                    <div className="rounded-lg border-2 border-primary bg-primary/5 p-4">
+                      <div className="flex items-center justify-between text-lg font-bold">
+                        <span>Total</span>
+                        <span className="text-primary">₹{totalPrice.toLocaleString('en-IN')}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Pay at the salon. Free cancellation up to 3 hrs before.
+                      </p>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Pay at the salon. Free cancellation up to 3 hrs before.
+                  ) : (
+                    <p className="rounded-lg border-2 border-primary bg-primary/5 p-4 text-sm text-muted-foreground">
+                      Free cancellation up to 3 hrs before.
                     </p>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1019,7 +1041,7 @@ function BookAppointmentPage() {
                 {date && time ? ` · ${date} ${time}` : ''}
                 {selectedServices.length > 0 ? ' · Tap to view' : ''}
               </p>
-              <p className="font-semibold text-primary">{formatInr(totalPrice)}</p>
+              {showPrices && <p className="font-semibold text-primary">{formatInr(totalPrice)}</p>}
             </div>
             {selectedServices.length > 0 && (
               <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
