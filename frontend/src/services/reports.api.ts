@@ -5,24 +5,27 @@ import { downloadBlob } from '@/lib/downloadFile';
 
 export type ReportType = 'sales' | 'appointments' | 'staff';
 
+export type ReportFormat = 'pdf' | 'xlsx';
+
 export interface DownloadReportInput {
   type: ReportType;
   from: string;
   to: string;
+  format?: ReportFormat;
 }
 
 /**
- * Downloads one of the admin PDF reports and saves it straight to disk —
- * a one-shot action (not cached data), so this is a mutation rather than a
- * query, same as every other "do a thing" call in the app.
+ * Downloads one of the admin reports (PDF or Excel) and saves it straight
+ * to disk — a one-shot action (not cached data), so this is a mutation
+ * rather than a query, same as every other "do a thing" call in the app.
  */
 export function useDownloadReport() {
   return useMutation({
-    mutationFn: async ({ type, from, to }: DownloadReportInput) => {
+    mutationFn: async ({ type, from, to, format = 'pdf' }: DownloadReportInput) => {
       let res;
       try {
         res = await api.get(`/reports/${type}`, {
-          params: { from, to },
+          params: { from, to, format },
           responseType: 'blob',
         });
       } catch (err) {
@@ -39,7 +42,7 @@ export function useDownloadReport() {
         }
         throw err;
       }
-      downloadBlob(res.data as Blob, `${type}-report_${from}_to_${to}.pdf`);
+      downloadBlob(res.data as Blob, `${type}-report_${from}_to_${to}.${format}`);
     },
   });
 }

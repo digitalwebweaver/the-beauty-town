@@ -12,6 +12,7 @@ export const reportQuery = z
   .object({
     from: isoDate,
     to: isoDate,
+    format: z.enum(['pdf', 'xlsx']).default('pdf'),
   })
   .refine((v) => v.from <= v.to, {
     message: '"from" must be on or before "to"',

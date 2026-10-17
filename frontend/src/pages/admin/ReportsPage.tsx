@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { endOfMonth, format, startOfMonth, startOfYear, subDays, subMonths } from 'date-fns';
-import { CalendarCheck, Check, FileBarChart, Loader2, ReceiptText, Users } from 'lucide-react';
+import {
+  CalendarCheck,
+  Check,
+  FileBarChart,
+  FileSpreadsheet,
+  Loader2,
+  ReceiptText,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import PageHeader from '@/components/common/PageHeader';
 import { cn } from '@/lib/utils';
 import { apiError } from '@/lib/apiError';
-import { useDownloadReport, type ReportType } from '@/services/reports.api';
+import { useDownloadReport, type ReportFormat, type ReportType } from '@/services/reports.api';
 
 const REPORTS: {
   type: ReportType;
@@ -41,6 +49,8 @@ const toIso = (d: Date) => format(d, 'yyyy-MM-dd');
 const today = new Date();
 
 const PRESETS: { label: string; from: Date; to: Date }[] = [
+  { label: 'Today', from: today, to: today },
+  { label: 'Yesterday', from: subDays(today, 1), to: subDays(today, 1) },
   { label: 'Last 7 days', from: subDays(today, 6), to: today },
   { label: 'Last 30 days', from: subDays(today, 29), to: today },
   { label: 'This month', from: startOfMonth(today), to: today },
@@ -58,11 +68,11 @@ function ReportsPage() {
   const [to, setTo] = useState(toIso(today));
   const download = useDownloadReport();
 
-  const handleDownload = async () => {
+  const handleDownload = async (format: ReportFormat) => {
     if (!from || !to) return toast.error('Pick a start and end date');
     if (from > to) return toast.error('"From" must be before "to"');
     try {
-      await download.mutateAsync({ type, from, to });
+      await download.mutateAsync({ type, from, to, format });
       toast.success('Report downloaded');
     } catch (err) {
       toast.error(apiError(err, 'Could not generate the report'));
@@ -73,7 +83,7 @@ function ReportsPage() {
     <div>
       <PageHeader
         title="Reports"
-        description="Download branded, printable PDF reports for any date range."
+        description="Download branded PDF or Excel reports for any date range — including today's."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -161,14 +171,28 @@ function ReportsPage() {
                 className="w-full sm:w-44"
               />
             </div>
-            <Button onClick={handleDownload} disabled={download.isPending} className="sm:ml-auto">
-              {download.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <FileBarChart className="mr-2 h-4 w-4" />
-              )}
-              {download.isPending ? 'Generating…' : 'Download PDF'}
-            </Button>
+            <div className="flex gap-2 sm:ml-auto">
+              <Button
+                variant="outline"
+                onClick={() => handleDownload('xlsx')}
+                disabled={download.isPending}
+              >
+                {download.isPending && download.variables?.format === 'xlsx' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                )}
+                Excel
+              </Button>
+              <Button onClick={() => handleDownload('pdf')} disabled={download.isPending}>
+                {download.isPending && download.variables?.format === 'pdf' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileBarChart className="mr-2 h-4 w-4" />
+                )}
+                Download PDF
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
