@@ -1292,7 +1292,10 @@ function QuickBillingPage() {
 
               {/* POS slip — narrow continuous-strip layout, print-only */}
               {printFormat === 'pos' && (
-                <div className="hidden w-[76mm] bg-white p-2 text-black print:block">
+                <div
+                  data-receipt-print
+                  className="hidden w-[76mm] bg-white p-2 text-black print:block"
+                >
                   <div className="text-center">
                     <p className="text-sm font-bold">{settings.name}</p>
                     <p className="text-[10px]">{settings.address}</p>
@@ -1366,7 +1369,7 @@ function QuickBillingPage() {
 
               {/* A4 invoice — full-page layout, print-only */}
               {printFormat === 'a4' && (
-                <div className="hidden bg-white p-8 text-black print:block">
+                <div data-receipt-print className="hidden bg-white p-8 text-black print:block">
                   <div className="flex items-start justify-between border-b-2 border-black pb-4">
                     <div className="flex items-center gap-4">
                       {settings.logo_url && (

@@ -143,13 +143,28 @@
   }
 }
 
-/* Printing a receipt: dialogs portal outside #root, so hiding the app
-   shell and the dialog chrome leaves just the receipt content behind. */
+/* Printing a receipt: the receipt dialog portals outside #root, so hiding
+   the app shell leaves just the receipt content behind. Scoped to only
+   fire when a `[data-receipt-print]` block actually exists (the Quick Bill
+   receipt sets this right before calling window.print()) — unconditionally
+   hiding #root broke printing on every other page that prints its own
+   content normally, like the public invoice (no portal involved there). */
 @media print {
-  #root,
+  body:has([data-receipt-print]) #root {
+    display: none;
+  }
   [data-slot='dialog-overlay'],
   [data-slot='dialog-close'] {
     display: none;
+  }
+
+  /* Printed background colors/tints (e.g. the invoice total highlight) are
+     off by default in most browsers unless "Background graphics" is
+     checked in the print dialog — force them on so printed pages actually
+     match the on-screen design instead of depending on that setting. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 
