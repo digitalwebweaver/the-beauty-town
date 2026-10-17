@@ -22,7 +22,7 @@ function AuthLayout() {
             <img
               src={imageUrl(settings.logo_url) || '/brand/logo.png'}
               alt=""
-              className="h-10 w-10 object-contain"
+              className="h-10 w-auto object-contain"
             />
             <span className="text-lg font-bold">{SALON_INFO.name}</span>
           </Link>

@@ -1368,12 +1368,12 @@ function QuickBillingPage() {
               {printFormat === 'a4' && (
                 <div className="hidden bg-white p-8 text-black print:block">
                   <div className="flex items-start justify-between border-b-2 border-black pb-4">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-4">
                       {settings.logo_url && (
                         <img
                           src={imageUrl(settings.logo_url)}
                           alt=""
-                          className="h-12 w-12 shrink-0 object-contain"
+                          className="h-20 w-auto shrink-0 rounded-lg object-contain"
                         />
                       )}
                       <div>

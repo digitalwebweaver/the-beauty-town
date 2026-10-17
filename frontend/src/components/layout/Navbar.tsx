@@ -51,7 +51,7 @@ function Navbar() {
           <img
             src={imageUrl(settings.logo_url) || '/brand/logo.png'}
             alt=""
-            className="h-10 w-10 object-contain"
+            className="h-10 w-auto object-contain"
           />
           <span className="font-display text-lg font-semibold tracking-tight text-brand-maroon-dark">
             {settings.name}

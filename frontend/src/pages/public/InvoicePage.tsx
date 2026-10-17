@@ -102,12 +102,12 @@ function InvoicePage() {
 
         <div className="rounded-xl border bg-white p-4 text-black shadow-sm sm:p-8 print:rounded-none print:border-none print:p-0 print:shadow-none">
           <div className="flex flex-col gap-4 border-b-2 border-black pb-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-4">
               {settings.logo_url && (
                 <img
                   src={imageUrl(settings.logo_url)}
                   alt=""
-                  className="h-12 w-12 shrink-0 object-contain"
+                  className="h-20 w-auto shrink-0 rounded-lg object-contain"
                 />
               )}
               <div>
