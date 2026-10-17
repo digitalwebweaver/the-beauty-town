@@ -683,6 +683,7 @@ CREATE INDEX idx_audit_target     ON audit_logs(target_type, target_id);
 CREATE TABLE salon_settings (
   id             SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   name           VARCHAR(150) NOT NULL,
+  logo_url       TEXT,
   tagline        VARCHAR(200),
   address        VARCHAR(300),
   phone          VARCHAR(20),

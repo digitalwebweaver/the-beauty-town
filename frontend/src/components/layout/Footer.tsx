@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Camera, Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import { imageUrl } from '@/lib/imageUrl';
 import { useSettings, SETTINGS_FALLBACK } from '@/services/settings.api';
 
 function Footer() {
@@ -12,7 +13,11 @@ function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <div className="mb-3 flex items-center gap-2.5">
-              <img src="/brand/logo.png" alt="" className="h-10 w-10 object-contain" />
+              <img
+                src={imageUrl(settings.logo_url) || '/brand/logo.png'}
+                alt=""
+                className="h-10 w-10 object-contain"
+              />
               <span className="font-display text-lg font-semibold text-white">{settings.name}</span>
             </div>
             <p className="text-sm">{settings.tagline}</p>

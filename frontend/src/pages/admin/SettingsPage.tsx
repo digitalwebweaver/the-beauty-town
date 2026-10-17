@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import PageHeader from '@/components/common/PageHeader';
 import { apiError } from '@/lib/apiError';
+import { imageUrl } from '@/lib/imageUrl';
+import api from '@/lib/axios';
 import {
   SETTINGS_FALLBACK,
   useSettings,
@@ -20,6 +22,7 @@ import {
 
 interface FormState {
   name: string;
+  logoUrl: string;
   tagline: string;
   address: string;
   phone: string;
@@ -35,6 +38,7 @@ interface FormState {
 function toFormState(s: SettingsDto): FormState {
   return {
     name: s.name ?? '',
+    logoUrl: s.logo_url ?? '',
     tagline: s.tagline ?? '',
     address: s.address ?? '',
     phone: s.phone ?? '',
@@ -70,12 +74,32 @@ function SettingsPage() {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+  const uploadLogo = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { data } = await api.post('/uploads/logo', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      set('logoUrl', data.data.url as string);
+      toast.success('Logo uploaded — click Save changes to apply it');
+    } catch (err) {
+      toast.error(apiError(err, 'Upload failed'));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const save = async () => {
     if (form.name.trim().length < 2) {
       return toast.error('Salon name is required');
     }
     const patch: UpdateSettingsInput = {
       name: form.name.trim(),
+      logoUrl: form.logoUrl.trim() || null,
       tagline: form.tagline.trim() || null,
       address: form.address.trim() || null,
       phone: form.phone.trim() || null,
@@ -107,8 +131,48 @@ function SettingsPage() {
           <div>
             <h3 className="text-sm font-semibold">Identity</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your salon's name and tagline, shown in the navbar, sidebar, and footer.
+              Your salon's name, logo and tagline, shown in the navbar, sidebar, footer and on
+              invoices.
             </p>
+            <div className="mt-4 flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
+                {form.logoUrl ? (
+                  <img
+                    src={imageUrl(form.logoUrl)}
+                    alt="Logo"
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">No logo</span>
+                )}
+              </div>
+              <div>
+                <input
+                  ref={logoFileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadLogo(f);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => logoFileRef.current?.click()}
+                  disabled={uploadingLogo}
+                >
+                  {uploadingLogo ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {form.logoUrl ? 'Change logo' : 'Upload logo'}
+                </Button>
+              </div>
+            </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="s-name">Salon name *</Label>

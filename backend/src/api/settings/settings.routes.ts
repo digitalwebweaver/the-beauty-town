@@ -16,6 +16,7 @@ const urlOrEmpty = z
 
 const updateSchema = z.object({
   name: z.string().min(2).max(150).optional(),
+  logoUrl: z.string().max(500).nullable().optional(),
   tagline: z.string().max(200).nullable().optional(),
   address: z.string().max(300).nullable().optional(),
   phone: z.string().max(20).nullable().optional(),

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import { formatInr } from '@/lib/formatCurrency';
+import { imageUrl } from '@/lib/imageUrl';
 import { useSettings, SETTINGS_FALLBACK } from '@/services/settings.api';
 import { useInvoice } from '@/services/sales.api';
 
@@ -101,13 +102,22 @@ function InvoicePage() {
 
         <div className="rounded-xl border bg-white p-4 text-black shadow-sm sm:p-8 print:rounded-none print:border-none print:p-0 print:shadow-none">
           <div className="flex flex-col gap-4 border-b-2 border-black pb-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-2xl font-bold">{settings.name}</p>
-              <p className="text-sm">{settings.address}</p>
-              <p className="text-sm">
-                {settings.phone} · {settings.email}
-              </p>
-              {settings.gstin && <p className="text-sm">GSTIN: {settings.gstin}</p>}
+            <div className="flex items-start gap-3">
+              {settings.logo_url && (
+                <img
+                  src={imageUrl(settings.logo_url)}
+                  alt=""
+                  className="h-12 w-12 shrink-0 object-contain"
+                />
+              )}
+              <div>
+                <p className="text-2xl font-bold">{settings.name}</p>
+                <p className="text-sm">{settings.address}</p>
+                <p className="text-sm">
+                  {settings.phone} · {settings.email}
+                </p>
+                {settings.gstin && <p className="text-sm">GSTIN: {settings.gstin}</p>}
+              </div>
             </div>
             <div className="sm:text-right">
               <p className="text-xl font-bold uppercase">Invoice</p>

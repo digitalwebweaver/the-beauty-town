@@ -13,6 +13,7 @@ import { PUBLIC_NAV } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { imageUrl } from '@/lib/imageUrl';
 import { useSettings, SETTINGS_FALLBACK } from '@/services/settings.api';
 
 interface NavDropdownLink {
@@ -47,7 +48,11 @@ function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
         <Link to={ROUTES.home} className="flex items-center gap-2.5">
-          <img src="/brand/logo.png" alt="" className="h-10 w-10 object-contain" />
+          <img
+            src={imageUrl(settings.logo_url) || '/brand/logo.png'}
+            alt=""
+            className="h-10 w-10 object-contain"
+          />
           <span className="font-display text-lg font-semibold tracking-tight text-brand-maroon-dark">
             {settings.name}
           </span>

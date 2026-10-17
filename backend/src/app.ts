@@ -18,10 +18,7 @@ import servicesRoutes from '@/api/services/services.routes';
 import packagesRoutes from '@/api/packages/packages.routes';
 import staffRoutes from '@/api/staff/staff.routes';
 import appointmentsRoutes from '@/api/appointments/appointments.routes';
-// TODO: src/api/uploads/uploads.routes.ts does not exist in the repo. Each
-// domain route handles its own uploads via middlewares/upload.ts, so no
-// caller depends on this. Restore when the module is added.
-// import uploadsRoutes from '@/api/uploads/uploads.routes';
+import uploadsRoutes from '@/api/uploads/uploads.routes';
 import usersRoutes from '@/api/users/users.routes';
 import reviewsRoutes from '@/api/reviews/reviews.routes';
 import productsRoutes from '@/api/products/products.routes';
@@ -108,7 +105,7 @@ export function createApp(): Express {
   app.use('/api/push', pushRoutes);
   app.use('/api/reports', reportsRoutes);
   app.use('/api/audit', auditRoutes);
-  // app.use('/api/uploads', uploadsRoutes); // see TODO near the import above
+  app.use('/api/uploads', uploadsRoutes);
 
   // 404 + error handler MUST be last
   app.use(notFound);

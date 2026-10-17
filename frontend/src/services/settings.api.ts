@@ -5,6 +5,7 @@ import { SALON_INFO } from '@/lib/mockData';
 export interface SettingsDto {
   id: number;
   name: string;
+  logo_url: string | null;
   tagline: string | null;
   address: string | null;
   phone: string | null;
@@ -26,6 +27,7 @@ const KEY = ['settings'];
 export const SETTINGS_FALLBACK: SettingsDto = {
   id: 1,
   name: SALON_INFO.name,
+  logo_url: null,
   tagline: SALON_INFO.tagline,
   address: SALON_INFO.address,
   phone: SALON_INFO.phone,
@@ -49,6 +51,7 @@ export function useSettings() {
 
 export interface UpdateSettingsInput {
   name?: string;
+  logoUrl?: string | null;
   tagline?: string | null;
   address?: string | null;
   phone?: string | null;

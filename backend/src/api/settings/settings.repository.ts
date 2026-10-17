@@ -3,6 +3,7 @@ import { query } from '@/config/db';
 export interface SalonSettingsRow {
   id: number;
   name: string;
+  logo_url: string | null;
   tagline: string | null;
   address: string | null;
   phone: string | null;
@@ -30,6 +31,7 @@ export async function getSettings(): Promise<SalonSettingsRow> {
 
 export interface UpdateSettingsInput {
   name?: string;
+  logoUrl?: string | null;
   tagline?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -46,6 +48,7 @@ export interface UpdateSettingsInput {
 
 const COLUMN_BY_KEY: Record<keyof UpdateSettingsInput, string> = {
   name: 'name',
+  logoUrl: 'logo_url',
   tagline: 'tagline',
   address: 'address',
   phone: 'phone',

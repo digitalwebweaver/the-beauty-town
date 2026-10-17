@@ -52,6 +52,7 @@ import { ROUTES } from '@/constants/routes';
 import api from '@/lib/axios';
 import { apiError } from '@/lib/apiError';
 import { formatInr } from '@/lib/formatCurrency';
+import { imageUrl } from '@/lib/imageUrl';
 import { formatTime } from '@/lib/formatDate';
 import { useSettings, SETTINGS_FALLBACK } from '@/services/settings.api';
 import { cn } from '@/lib/utils';
@@ -1367,13 +1368,22 @@ function QuickBillingPage() {
               {printFormat === 'a4' && (
                 <div className="hidden bg-white p-8 text-black print:block">
                   <div className="flex items-start justify-between border-b-2 border-black pb-4">
-                    <div>
-                      <p className="text-2xl font-bold">{settings.name}</p>
-                      <p className="text-sm">{settings.address}</p>
-                      <p className="text-sm">
-                        {settings.phone} · {settings.email}
-                      </p>
-                      {settings.gstin && <p className="text-sm">GSTIN: {settings.gstin}</p>}
+                    <div className="flex items-start gap-3">
+                      {settings.logo_url && (
+                        <img
+                          src={imageUrl(settings.logo_url)}
+                          alt=""
+                          className="h-12 w-12 shrink-0 object-contain"
+                        />
+                      )}
+                      <div>
+                        <p className="text-2xl font-bold">{settings.name}</p>
+                        <p className="text-sm">{settings.address}</p>
+                        <p className="text-sm">
+                          {settings.phone} · {settings.email}
+                        </p>
+                        {settings.gstin && <p className="text-sm">GSTIN: {settings.gstin}</p>}
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold uppercase">Invoice</p>

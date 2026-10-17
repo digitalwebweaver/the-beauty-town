@@ -2,8 +2,11 @@ import { Link, Outlet } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { SALON_INFO } from '@/lib/mockData';
 import FallbackImage from '@/components/common/FallbackImage';
+import { imageUrl } from '@/lib/imageUrl';
+import { useSettings, SETTINGS_FALLBACK } from '@/services/settings.api';
 
 function AuthLayout() {
+  const settings = useSettings().data ?? SETTINGS_FALLBACK;
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden overflow-hidden lg:block">
@@ -16,7 +19,11 @@ function AuthLayout() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/70 via-black/40 to-black/70" />
         <div className="relative flex h-full flex-col justify-between p-10 text-white">
           <Link to={ROUTES.home} className="flex items-center gap-2">
-            <img src="/brand/logo.png" alt="" className="h-10 w-10 object-contain" />
+            <img
+              src={imageUrl(settings.logo_url) || '/brand/logo.png'}
+              alt=""
+              className="h-10 w-10 object-contain"
+            />
             <span className="text-lg font-bold">{SALON_INFO.name}</span>
           </Link>
 
