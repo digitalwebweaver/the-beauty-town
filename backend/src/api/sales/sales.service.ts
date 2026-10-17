@@ -24,6 +24,8 @@ interface CreateSaleInput {
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  customerDateOfBirth?: string;
+  customerAnniversaryDate?: string;
   items: SaleItemInput[];
   discountInr: number;
   couponCode?: string;
@@ -33,6 +35,66 @@ interface CreateSaleInput {
 
 export async function createSale(input: CreateSaleInput, staffId: string) {
   return withTransaction(async (client) => {
+    // 0. A birthday/anniversary is only worth capturing if it lands on a
+    //    real, persistent customer record — a pure walk-in sale only ever
+    //    snapshots customer_name/customer_phone as plain text on the sale
+    //    row (see the INSERT below), which nothing ever reads back out as
+    //    "this person's birthday". So when either date is given and there's
+    //    no customer account yet, find-or-create one by phone (same
+    //    find-by-phone convention used throughout this file) and bill
+    //    against that account instead — same outcome as using the
+    //    dedicated "Add walk-in customer" flow first, just inline.
+    let customerId = input.customerId ?? null;
+    if (!customerId && (input.customerDateOfBirth || input.customerAnniversaryDate)) {
+      if (input.customerPhone) {
+        const existing = await client.query<{ id: string }>(
+          `SELECT id FROM users
+           WHERE role = 'customer'
+             AND right(regexp_replace(phone, '\\D', '', 'g'), 10) = right(regexp_replace($1, '\\D', '', 'g'), 10)
+           LIMIT 1`,
+          [input.customerPhone]
+        );
+        customerId = existing.rows[0]?.id ?? null;
+      }
+      if (!customerId && input.customerName) {
+        const placeholderEmail = `walkin_${Date.now()}_${Math.random().toString(16).slice(2, 8)}@internal.thebeautytown`;
+        const created = await client.query<{ id: string }>(
+          `INSERT INTO users (name, email, phone, role, date_of_birth, anniversary_date)
+           VALUES ($1, $2, $3, 'customer', $4, $5)
+           RETURNING id`,
+          [
+            input.customerName,
+            placeholderEmail,
+            input.customerPhone ?? null,
+            input.customerDateOfBirth ?? null,
+            input.customerAnniversaryDate ?? null,
+          ]
+        );
+        customerId = created.rows[0].id;
+      } else if (customerId) {
+        // Matched an existing customer by phone — fill in whichever of the
+        // two dates was actually provided, without clobbering one already
+        // on file with a blank.
+        const sets: string[] = [];
+        const params: unknown[] = [];
+        if (input.customerDateOfBirth) {
+          params.push(input.customerDateOfBirth);
+          sets.push(`date_of_birth = $${params.length}`);
+        }
+        if (input.customerAnniversaryDate) {
+          params.push(input.customerAnniversaryDate);
+          sets.push(`anniversary_date = $${params.length}`);
+        }
+        if (sets.length) {
+          params.push(customerId);
+          await client.query(
+            `UPDATE users SET ${sets.join(', ')} WHERE id = $${params.length}`,
+            params
+          );
+        }
+      }
+    }
+
     // 1. If checking out an appointment: lock it, make sure it's billable,
     //    and make sure it hasn't already been billed once before.
     if (input.appointmentId) {
@@ -200,7 +262,7 @@ export async function createSale(input: CreateSaleInput, staffId: string) {
           lineTotalInr: l.lineTotal,
         })),
         customerPhone: input.customerPhone,
-        customerId: input.customerId,
+        customerId: customerId ?? undefined,
       });
     }
     const couponDiscount = coupon?.discountInr ?? 0;
@@ -230,7 +292,7 @@ export async function createSale(input: CreateSaleInput, staffId: string) {
        RETURNING id`,
       [
         input.appointmentId ?? null,
-        input.customerId ?? null,
+        customerId,
         input.customerName ?? null,
         input.customerPhone ?? null,
         staffId,
@@ -249,7 +311,7 @@ export async function createSale(input: CreateSaleInput, staffId: string) {
       await recordRedemption(client, {
         couponId: coupon.couponId,
         saleId,
-        customerId: input.customerId ?? null,
+        customerId,
         customerPhone: input.customerPhone ?? null,
         discountAppliedInr: coupon.discountInr,
         staffId,

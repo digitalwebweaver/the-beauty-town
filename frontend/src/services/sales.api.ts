@@ -78,6 +78,8 @@ export interface CreateSaleInput {
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  customerDateOfBirth?: string;
+  customerAnniversaryDate?: string;
   items: CreateSaleItemInput[];
   discountInr: number;
   couponCode?: string;

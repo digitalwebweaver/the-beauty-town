@@ -50,6 +50,18 @@ export const nameField = (min = 2, max = 120) =>
     .regex(/^[A-Za-z\s.'\-]+$/, 'Name cannot contain numbers or symbols');
 
 /**
+ * A plain calendar date (birthday, anniversary, etc.) — YYYY-MM-DD, no time
+ * component. Not in the future: a birthday/anniversary that hasn't happened
+ * yet is always a typo (wrong century is the common one — a date picker
+ * defaults near "today").
+ */
+export const pastDateField = () =>
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+    .refine((v) => v <= new Date().toISOString().slice(0, 10), "Can't be in the future");
+
+/**
  * A NEW password being set (register, reset, change) — 8+ chars with at
  * least one letter and one digit. Only for endpoints that CREATE a
  * credential; login schemas must stay lenient (`z.string().min(6)`) so an

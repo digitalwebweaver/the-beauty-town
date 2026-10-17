@@ -111,6 +111,8 @@ CREATE TABLE users (
   role                   user_role NOT NULL DEFAULT 'customer',
   password_hash          TEXT,
   avatar_url             TEXT,
+  date_of_birth          DATE,
+  anniversary_date       DATE,
   -- Customer-facing notification toggles (Profile page). Keys:
   -- appointmentReminders, promotionalOffers, newsletter — all booleans.
   notification_prefs     JSONB NOT NULL DEFAULT

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { nameField, phoneField, uuidString } from '@/utils/zodHelpers';
+import { nameField, pastDateField, phoneField, uuidString } from '@/utils/zodHelpers';
 
 const saleItemSchema = z.object({
   type: z.enum(['service', 'product', 'package']),
@@ -23,6 +23,11 @@ export const createSaleSchema = z.object({
   customerId: uuidString().optional(),
   customerName: nameField(2, 120).optional(),
   customerPhone: phoneField().optional(),
+  // Captured here (rather than only in the dedicated "Add walk-in customer"
+  // flow) so front-desk staff can record it in one pass while billing a
+  // new customer, instead of a separate trip to the Customers page.
+  customerDateOfBirth: pastDateField().optional(),
+  customerAnniversaryDate: pastDateField().optional(),
   items: z.array(saleItemSchema).min(1).max(40),
   discountInr: z.coerce.number().min(0).max(999999).default(0),
   couponCode: z.string().max(30).optional(),

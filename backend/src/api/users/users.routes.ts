@@ -8,7 +8,7 @@ import { query, withTransaction } from '@/config/db';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { ok, paginated } from '@/utils/ApiResponse';
 import { ApiError } from '@/utils/ApiError';
-import { imageRef, nameField, phoneField, uuidString } from '@/utils/zodHelpers';
+import { imageRef, nameField, pastDateField, phoneField, uuidString } from '@/utils/zodHelpers';
 import { createAppointment } from '@/api/appointments/appointments.service';
 
 const router = Router();
@@ -183,7 +183,8 @@ router.get(
     const id = req.params.id as string;
 
     const userRes = await query(
-      `SELECT id, name, email, phone, avatar_url, created_at, is_active, last_login_at
+      `SELECT id, name, email, phone, avatar_url, created_at, is_active, last_login_at,
+              date_of_birth, anniversary_date
        FROM users
        WHERE id = $1 AND role = 'customer'`,
       [id]
@@ -287,6 +288,8 @@ const walkInSchema = z.object({
   name: nameField(2, 120),
   email: z.string().email().max(180).optional(),
   phone: phoneField().optional(),
+  dateOfBirth: pastDateField().optional(),
+  anniversaryDate: pastDateField().optional(),
   visit: z
     .object({
       serviceIds: z.array(uuidString()).min(1).max(10),
@@ -316,10 +319,17 @@ router.post(
     const customer = await withTransaction(async (client) => {
       try {
         const { rows } = await client.query(
-          `INSERT INTO users (name, email, phone, role, email_verified)
-           VALUES ($1, $2, $3, 'customer', $4)
-           RETURNING id, name, email, phone, avatar_url, created_at`,
-          [b.name, email, b.phone ?? null, !!b.email]
+          `INSERT INTO users (name, email, phone, role, email_verified, date_of_birth, anniversary_date)
+           VALUES ($1, $2, $3, 'customer', $4, $5, $6)
+           RETURNING id, name, email, phone, avatar_url, created_at, date_of_birth, anniversary_date`,
+          [
+            b.name,
+            email,
+            b.phone ?? null,
+            !!b.email,
+            b.dateOfBirth ?? null,
+            b.anniversaryDate ?? null,
+          ]
         );
         return rows[0];
       } catch (err: any) {

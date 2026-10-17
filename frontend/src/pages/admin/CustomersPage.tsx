@@ -68,6 +68,8 @@ function AddWalkInDialog({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [anniversaryDate, setAnniversaryDate] = useState('');
   const [logVisit, setLogVisit] = useState(false);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [staffId, setStaffId] = useState<string>('');
@@ -79,6 +81,8 @@ function AddWalkInDialog({
     setName('');
     setEmail('');
     setPhone('');
+    setDateOfBirth('');
+    setAnniversaryDate('');
     setLogVisit(false);
     setSelectedServiceIds([]);
     setStaffId('');
@@ -99,6 +103,8 @@ function AddWalkInDialog({
       name,
       email: email || undefined,
       phone: phone || undefined,
+      dateOfBirth: dateOfBirth || undefined,
+      anniversaryDate: anniversaryDate || undefined,
     };
     if (logVisit) {
       if (selectedServiceIds.length === 0)
@@ -165,6 +171,29 @@ function AddWalkInDialog({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Leave blank if the customer has no email"
             />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="wi-dob">Birthday (optional)</Label>
+              <Input
+                id="wi-dob"
+                type="date"
+                value={dateOfBirth}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wi-anniversary">Anniversary (optional)</Label>
+              <Input
+                id="wi-anniversary"
+                type="date"
+                value={anniversaryDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setAnniversaryDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <Separator />

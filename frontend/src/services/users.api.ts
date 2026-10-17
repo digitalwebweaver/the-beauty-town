@@ -85,6 +85,8 @@ export interface WalkInInput {
   name: string;
   email?: string;
   phone?: string;
+  dateOfBirth?: string;
+  anniversaryDate?: string;
   visit?: {
     serviceIds: string[];
     staffId?: string | null;
@@ -149,6 +151,8 @@ export interface CustomerDetail {
     created_at: string;
     is_active: boolean;
     last_login_at: string | null;
+    date_of_birth: string | null;
+    anniversary_date: string | null;
   };
   stats: {
     totalVisits: number;

@@ -108,6 +108,11 @@ function QuickBillingPage() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  // Only meaningful for a new walk-in — capturing either one promotes them
+  // to a real customer record (see sales.service.ts) instead of being a
+  // one-off sale-row snapshot nobody can read back out later.
+  const [customerDob, setCustomerDob] = useState('');
+  const [customerAnniversary, setCustomerAnniversary] = useState('');
 
   const [itemTab, setItemTab] = useState<ItemType>('service');
   const [itemSearch, setItemSearch] = useState('');
@@ -217,6 +222,8 @@ function QuickBillingPage() {
     setCustomerId(null);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerDob('');
+    setCustomerAnniversary('');
     setAppliedCoupon(null);
     setCouponInput('');
   }
@@ -316,6 +323,8 @@ function QuickBillingPage() {
     setCustomerId(null);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerDob('');
+    setCustomerAnniversary('');
     setDiscountMode('flat');
     setDiscountValue(0);
     setNotes('');
@@ -440,6 +449,8 @@ function QuickBillingPage() {
         customerId: customerId ?? undefined,
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
+        customerDateOfBirth: customerDob || undefined,
+        customerAnniversaryDate: customerAnniversary || undefined,
         items: cart.map((l) => ({
           type: l.type,
           id: l.refId,
@@ -762,6 +773,32 @@ function QuickBillingPage() {
                       onChange={(e) => setCustomerPhone(digitsOnly(e.target.value))}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="qb-dob">Birthday (optional)</Label>
+                    <Input
+                      id="qb-dob"
+                      type="date"
+                      value={customerDob}
+                      max={today}
+                      onChange={(e) => setCustomerDob(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="qb-anniversary">Anniversary (optional)</Label>
+                    <Input
+                      id="qb-anniversary"
+                      type="date"
+                      value={customerAnniversary}
+                      max={today}
+                      onChange={(e) => setCustomerAnniversary(e.target.value)}
+                    />
+                  </div>
+                  {(customerDob || customerAnniversary) && !customerPhone && (
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      Add a phone number too, so this is saved to their customer record instead of
+                      just this bill.
+                    </p>
+                  )}
                 </div>
               ) : mode === 'existing' ? (
                 customerId ? (
